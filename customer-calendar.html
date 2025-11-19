@@ -155,22 +155,36 @@ function generateCalendar(fullDates) {
 
   // 日期格
   for (let d = 1; d <= days; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    const isFull = fullDates.includes(dateStr);
+  const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const isFull = fullDates.includes(dateStr);
 
-    const div = document.createElement("div");
-    div.className = "day " + (isFull ? "full" : "free");
-    div.textContent = isFull ? "額滿" : d;
+  const div = document.createElement("div");
+  div.classList.add("day");
 
-    if (!isFull) {
-      div.onclick = () => {
-        const house = document.getElementById("house").value;
-        window.location.href = `index.html?house=${house}&date=${dateStr}`;
-      };
-    }
-
-    cal.appendChild(div);
+  // 判斷星期幾（0 日～ 6 六）
+  const dow = new Date(currentYear, currentMonth, d).getDay();
+  if (dow === 0 || dow === 6) {
+    div.classList.add("weekend");  // 六日紅底
   }
+
+  // 套用額滿 / 可預訂顏色
+  if (isFull) {
+    div.classList.add("full");
+    div.textContent = "額滿";
+  } else {
+    div.classList.add("free");
+    div.textContent = d;
+
+    // 點擊跳轉預訂
+    div.onclick = () => {
+      const house = document.getElementById("house").value;
+      window.location.href = `index.html?house=${house}&date=${dateStr}`;
+    };
+  }
+
+  cal.appendChild(div);
+}
+
 }
 
 // === 月份切換 ===
