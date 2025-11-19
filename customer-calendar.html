@@ -58,38 +58,35 @@
   }
 
   /* 六日粉色底 */
-  .weekend {
-    background: #ffe5e5;
-    color: #b40000;
-    font-weight: 700;
-  }
+  /* 六日粉色背景（基底） */
+.weekend {
+  background: #ffe5e5 !important;
+  color: #b40000 !important;
+  font-weight: 700;
+}
 
-  /* 可預訂：覆蓋週末 */
-  .free {
-    background: #77dd77 !important;
-    color: #ffffff !important;
-    font-weight: 900;
-    cursor: pointer;
-  }
-
-  /* 額滿：最高優先級 */
-  .full {
-    background: #ffffff !important;
-    color: red !important;
-    font-weight: 900;
-    border: 2px solid red !important;
-  }
-
-  .house-switch {
-    margin-bottom: 20px;
-  }
-  /* 今天：綠色圈圈 */
-.today {
-  border: 3px solid #06c755 !important;
+/* 可預訂（不覆蓋週末粉色，只覆蓋文字） */
+.free {
+  background: #77dd77 !important;
+  color: #ffffff !important;
   font-weight: 900;
 }
 
-/* 過去日期：灰底 + 無法點擊 */
+/* 額滿：最高優先 */
+.full {
+  background: #ffffff !important;
+  color: red !important;
+  border: 2px solid red !important;
+  font-weight: 900;
+}
+
+/* 今天：綠色圈圈 */
+.today {
+  border: 3px solid #06c755 !important;
+  box-sizing: border-box;
+}
+
+/* 過期：灰色禁用 */
 .disabled {
   background: #e5e5e5 !important;
   color: #999 !important;
@@ -97,6 +94,21 @@
   pointer-events: none;
   opacity: 0.6;
 }
+
+/* 節日（黃色） */
+.holiday {
+  background: #fff8c4 !important;
+  color: #9a7500 !important;
+  font-weight: 900;
+}
+
+/* 春節（橘色更醒目） */
+.newyear {
+  background: #ffd8a8 !important;
+  color: #b85c00 !important;
+  font-weight: 900;
+}
+
 
 </style>
 </head>
@@ -169,8 +181,26 @@ function generateCalendar() {
   // 補空白
   for (let i = 0; i < first; i++) cal.innerHTML += `<div></div>`;
 
-  // 日期
-  for (let d = 1; d <= days; d++) {
+  // === 節日表（可自行加） ===
+const HOLIDAYS = {
+  "2025-01-01": "元旦",
+  "2025-02-28": "和平紀念日",
+  "2025-04-04": "兒童節",
+  "2025-04-05": "清明節",
+  "2025-06-06": "端午節",
+  "2025-09-17": "中秋節",
+  "2025-10-10": "國慶日",
+
+  // 春節連假（你可自行延伸）
+  "2025-01-28": "春節",
+  "2025-01-29": "春節",
+  "2025-01-30": "春節",
+  "2025-01-31": "春節",
+  "2025-02-01": "春節",
+  "2025-02-02": "春節"
+};
+
+for (let d = 1; d <= days; d++) {
   const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
   const isFull = fullDates.includes(dateStr);
 
@@ -179,20 +209,20 @@ function generateCalendar() {
 
   const cellDate = new Date(currentYear, currentMonth, d);
   const today = new Date();
-  today.setHours(0,0,0,0); // 過濾時間部分
+  today.setHours(0,0,0,0);
   cellDate.setHours(0,0,0,0);
 
-  // 今天日期
+  // 今天？
   const isToday = (cellDate.getTime() === today.getTime());
 
-  // 是否過期
+  // 已過期？
   const isPast = (cellDate.getTime() < today.getTime());
 
-  // 六日判斷
+  // 星期幾？
   const dow = cellDate.getDay();
   const isWeekend = (dow === 0 || dow === 6);
 
-  // === 1. 今天以前的日子 → 禁止選擇 ===
+  // === 過期 ===
   if (isPast) {
     div.classList.add("disabled");
     div.textContent = d;
@@ -200,37 +230,52 @@ function generateCalendar() {
     continue;
   }
 
-  // === 2. 六日粉色底（基底） ===
+  // === 六日粉紅底（優先級：低於可預訂、高於今天圈） ===
   if (isWeekend) {
     div.classList.add("weekend");
   }
 
-  // === 3. 額滿（最高優先） ===
+  // === 春節強調 ===
+  if (HOLIDAYS[dateStr] === "春節") {
+    div.classList.remove("weekend");
+    div.classList.add("newyear");
+  }
+
+  // === 其他節日（黃色） ===
+  if (HOLIDAYS[dateStr] && HOLIDAYS[dateStr] !== "春節") {
+    div.classList.add("holiday");
+  }
+
+  // === 額滿（最高優先） ===
   if (isFull) {
     div.classList.add("full");
     div.textContent = "額滿";
-
     cal.appendChild(div);
     continue;
   }
 
-  // === 4. 可預訂（覆蓋粉紅底） ===
+  // === 可預訂（覆蓋週末背景） ===
   div.classList.add("free");
   div.textContent = d;
 
-  // 點擊跳轉
   div.onclick = () => {
     const house = document.getElementById("house").value;
     window.location.href = `index.html?house=${house}&date=${dateStr}`;
   };
 
-  // === 5. 今天 → 綠色圈圈標示（不覆蓋底色） ===
+  // === 今天圈起來（不蓋背景） ===
   if (isToday) {
     div.classList.add("today");
   }
 
+  // === 顯示節日文字（可選） ===
+  if (HOLIDAYS[dateStr]) {
+    div.innerHTML = `${d}<br><small>${HOLIDAYS[dateStr]}</small>`;
+  }
+
   cal.appendChild(div);
 }
+
 
 }
 
