@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>可預訂日曆</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+  body {
+    font-family: "Noto Sans TC", sans-serif;
+    padding: 20px;
+  }
+
+  h2 { margin: 0 0 10px; }
+
+  .month-nav {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0 20px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .nav-btn {
+    cursor: pointer;
+    color: #06c755;
+  }
+
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+
+  .day {
+    padding: 12px 4px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+    font-size: 20px;
+  }
+
+  .free {
+    background: #77dd77;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .full {
+    background: #ffffff;
+    color: red;
+    font-weight: 800;
+    border: 2px solid red;
+  }
+
+  .house-switch {
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>可預訂日期</h2>
+
+<div class="house-switch">
+  <label>選擇館別：</label>
+  <select id="house">
+    <option value="A館">A館</option>
+    <option value="B館">B館</option>
+  </select>
+</div>
+
+<!-- 月份切換列 -->
+<div class="month-nav">
+  <div id="prev" class="nav-btn">← 上個月</div>
+  <div id="monthLabel"></div>
+  <div id="next" class="nav-btn">下個月 →</div>
+</div>
+
+<div id="calendar" class="calendar"></div>
+
+<script>
+// ★★★ 你的 GAS API ★★★
+const API =
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+
+// === 取得房況並產生日曆 ===
+async function loadCalendar() {
+  const house = document.getElementById("house").value;
+
+  const res = await fetch(API + "?action=getRoomStatus");
+  const data = await res.json();
+  const fullDates = data[house];
+
+  generateCalendar(fullDates);
+}
+
+// === 產生指定年月的日曆 ===
+function generateCalendar(fullDates) {
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+
+  const monthLabel = document.getElementById("monthLabel");
+  monthLabel.textContent = `${currentYear} 年 ${currentMonth + 1} 月`;
+
+  const first = new Date(currentYear, currentMonth, 1).getDay();
+  const days = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // 補空白
+  for (let i = 0; i < first; i++) {
+    cal.innerHTML += `<div></div>`;
+  }
+
+  // 日期格
+  for (let d = 1; d <= days; d++) {
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const isFull = fullDates.includes(dateStr);
+
+    const div = document.createElement("div");
+    div.className = "day " + (isFull ? "full" : "free");
+    div.textContent = isFull ? "額滿" : d;
+
+    if (!isFull) {
+      div.onclick = () => {
+        const house = document.getElementById("house").value;
+        window.location.href = `index.html?house=${house}&date=${dateStr}`;
+      };
+    }
+
+    cal.appendChild(div);
+  }
+}
+
+// === 月份切換 ===
+document.getElementById("prev").onclick = function () {
+  currentMonth--;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  loadCalendar();
+};
+
+document.getElementById("next").onclick = function () {
+  currentMonth++;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  loadCalendar();
+};
+
+document.getElementById("house").addEventListener("change", loadCalendar);
+
+// 初始化
+loadCalendar();
+</script>
+
+</body>
+</html>
