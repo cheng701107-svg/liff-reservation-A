@@ -83,6 +83,21 @@
   .house-switch {
     margin-bottom: 20px;
   }
+  /* 今天：綠色圈圈 */
+.today {
+  border: 3px solid #06c755 !important;
+  font-weight: 900;
+}
+
+/* 過去日期：灰底 + 無法點擊 */
+.disabled {
+  background: #e5e5e5 !important;
+  color: #999 !important;
+  border: 1px solid #ccc !important;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 </style>
 </head>
 
@@ -156,34 +171,67 @@ function generateCalendar() {
 
   // 日期
   for (let d = 1; d <= days; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    const isFull = fullDates.includes(dateStr);
+  const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const isFull = fullDates.includes(dateStr);
 
-    const div = document.createElement("div");
-    div.classList.add("day");
+  const div = document.createElement("div");
+  div.classList.add("day");
 
-    // 判斷六日
-    const dow = new Date(currentYear, currentMonth, d).getDay();
-    const isWeekend = (dow === 0 || dow === 6);
-    if (isWeekend) div.classList.add("weekend");
+  const cellDate = new Date(currentYear, currentMonth, d);
+  const today = new Date();
+  today.setHours(0,0,0,0); // 過濾時間部分
+  cellDate.setHours(0,0,0,0);
 
-    // 額滿
-    if (isFull) {
-      div.classList.add("full");
-      div.textContent = "額滿";
-    } 
-    else {
-      // 可預訂
-      div.classList.add("free");
-      div.textContent = d;
+  // 今天日期
+  const isToday = (cellDate.getTime() === today.getTime());
 
-      div.onclick = () => {
-        window.location.href = `index.html?house=${house}&date=${dateStr}`;
-      };
-    }
+  // 是否過期
+  const isPast = (cellDate.getTime() < today.getTime());
+
+  // 六日判斷
+  const dow = cellDate.getDay();
+  const isWeekend = (dow === 0 || dow === 6);
+
+  // === 1. 今天以前的日子 → 禁止選擇 ===
+  if (isPast) {
+    div.classList.add("disabled");
+    div.textContent = d;
+    cal.appendChild(div);
+    continue;
+  }
+
+  // === 2. 六日粉色底（基底） ===
+  if (isWeekend) {
+    div.classList.add("weekend");
+  }
+
+  // === 3. 額滿（最高優先） ===
+  if (isFull) {
+    div.classList.add("full");
+    div.textContent = "額滿";
 
     cal.appendChild(div);
+    continue;
   }
+
+  // === 4. 可預訂（覆蓋粉紅底） ===
+  div.classList.add("free");
+  div.textContent = d;
+
+  // 點擊跳轉
+  div.onclick = () => {
+    const house = document.getElementById("house").value;
+    window.location.href = `index.html?house=${house}&date=${dateStr}`;
+  };
+
+  // === 5. 今天 → 綠色圈圈標示（不覆蓋底色） ===
+  if (isToday) {
+    div.classList.add("today");
+  }
+
+  cal.appendChild(div);
+}
+
 }
 
 async function loadCalendar() {
