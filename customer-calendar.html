@@ -39,6 +39,7 @@
   .week-header div:nth-child(1),
   .week-header div:nth-child(7) {
     color: red;
+    font-weight: 900;
   }
 
   .calendar {
@@ -47,7 +48,6 @@
     gap: 8px;
   }
 
-  /* 日期格子（基底） */
   .day {
     padding: 12px 4px;
     border-radius: 8px;
@@ -57,59 +57,43 @@
     position: relative;
   }
 
-  /* 六日粉色底 */
-  /* 六日粉色背景（基底） */
-.weekend {
-  background: #ffe5e5 !important;
-  color: #b40000 !important;
-  font-weight: 700;
-}
+  /* 六日粉色背景 */
+  .weekend {
+    background: #ffe5e5 !important;
+    color: #b40000 !important;
+    font-weight: 700;
+  }
 
-/* 可預訂（不覆蓋週末粉色，只覆蓋文字） */
-.free {
-  background: #77dd77 !important;
-  color: #ffffff !important;
-  font-weight: 900;
-}
+  /* 額滿 */
+  .full {
+    background: #ffffff !important;
+    color: red !important;
+    border: 2px solid red !important;
+    font-weight: 900;
+  }
 
-/* 額滿：最高優先 */
-.full {
-  background: #ffffff !important;
-  color: red !important;
-  border: 2px solid red !important;
-  font-weight: 900;
-}
+  /* 可預訂 */
+  .free {
+    background: #77dd77 !important;
+    color: white !important;
+    font-weight: 900;
+    cursor: pointer;
+  }
 
-/* 今天：綠色圈圈 */
-.today {
-  border: 3px solid #06c755 !important;
-  box-sizing: border-box;
-}
+  /* 今天 */
+  .today {
+    border: 3px solid #06c755 !important;
+    box-sizing: border-box;
+  }
 
-/* 過期：灰色禁用 */
-.disabled {
-  background: #e5e5e5 !important;
-  color: #999 !important;
-  border: 1px solid #ccc !important;
-  pointer-events: none;
-  opacity: 0.6;
-}
-
-/* 節日（黃色） */
-.holiday {
-  background: #fff8c4 !important;
-  color: #9a7500 !important;
-  font-weight: 900;
-}
-
-/* 春節（橘色更醒目） */
-.newyear {
-  background: #ffd8a8 !important;
-  color: #b85c00 !important;
-  font-weight: 900;
-}
-
-
+  /* 過期禁用 */
+  .disabled {
+    background: #e5e5e5 !important;
+    color: #999 !important;
+    border: 1px solid #ccc !important;
+    pointer-events: none;
+    opacity: 0.6;
+  }
 </style>
 </head>
 
@@ -125,14 +109,12 @@
   </select>
 </div>
 
-<!-- 月份切換 -->
 <div class="month-nav">
   <div id="prev" class="nav-btn">← 上個月</div>
   <div id="monthLabel"></div>
   <div id="next" class="nav-btn">下個月 →</div>
 </div>
 
-<!-- 星期列 -->
 <div class="week-header">
   <div>日</div>
   <div>一</div>
@@ -146,161 +128,110 @@
 <div id="calendar" class="calendar"></div>
 
 <script>
-// ★★★ GAS API ★★★
+// ★ GAS API
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-// === 前端快取（只載入一次） ===
-let CACHE = null;
-
+let fullData = null;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-// === 第一次載入：抓一年資料，只打一次 API ===
-async function initRoomData() {
-  if (CACHE) return; // 已抓過 → 不重複打 API
-
-  const res = await fetch(API + "?action=getRoomStatus");
-  CACHE = await res.json();   // 存到全域變數
+// ★ 每次都重新抓（不使用快取）
+async function loadRoomStatus() {
+  const res = await fetch(API + "?action=getRoomStatus&v=" + Date.now());
+  fullData = await res.json();
 }
 
-// === 產生日曆 ===
 function generateCalendar() {
   const house = document.getElementById("house").value;
-  const fullDates = CACHE[house];
+  const fullDates = fullData[house];
 
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
 
-  const monthLabel = document.getElementById("monthLabel");
-  monthLabel.textContent = `${currentYear} 年 ${currentMonth + 1} 月`;
+  document.getElementById("monthLabel").textContent =
+    `${currentYear} 年 ${currentMonth + 1} 月`;
 
   const first = new Date(currentYear, currentMonth, 1).getDay();
   const days = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  // 補空白
-  for (let i = 0; i < first; i++) cal.innerHTML += `<div></div>`;
-
-  // === 節日表（可自行加） ===
-const HOLIDAYS = {
-  "2025-01-01": "元旦",
-  "2025-02-28": "和平紀念日",
-  "2025-04-04": "兒童節",
-  "2025-04-05": "清明節",
-  "2025-06-06": "端午節",
-  "2025-09-17": "中秋節",
-  "2025-10-10": "國慶日",
-
-  // 春節連假（你可自行延伸）
-  "2025-01-28": "春節",
-  "2025-01-29": "春節",
-  "2025-01-30": "春節",
-  "2025-01-31": "春節",
-  "2025-02-01": "春節",
-  "2025-02-02": "春節"
-};
-
-for (let d = 1; d <= days; d++) {
-  const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  const isFull = fullDates.includes(dateStr);
-
-  const div = document.createElement("div");
-  div.classList.add("day");
-
-  const cellDate = new Date(currentYear, currentMonth, d);
   const today = new Date();
   today.setHours(0,0,0,0);
-  cellDate.setHours(0,0,0,0);
 
-  // 今天？
-  const isToday = (cellDate.getTime() === today.getTime());
+  // 補空格
+  for (let i = 0; i < first; i++) {
+    cal.innerHTML += `<div></div>`;
+  }
 
-  // 已過期？
-  const isPast = (cellDate.getTime() < today.getTime());
+  for (let d = 1; d <= days; d++) {
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const div = document.createElement("div");
+    div.classList.add("day");
 
-  // 星期幾？
-  const dow = cellDate.getDay();
-  const isWeekend = (dow === 0 || dow === 6);
+    const cellDate = new Date(currentYear, currentMonth, d);
+    cellDate.setHours(0,0,0,0);
 
-  // === 過期 ===
-  if (isPast) {
-    div.classList.add("disabled");
+    const dow = cellDate.getDay();
+    const isWeekend = (dow === 0 || dow === 6);
+
+    // 過期禁用
+    if (cellDate < today) {
+      div.classList.add("disabled");
+      div.textContent = d;
+      cal.appendChild(div);
+      continue;
+    }
+
+    if (isWeekend) div.classList.add("weekend");
+
+    // 額滿
+    if (fullDates.includes(dateStr)) {
+      div.classList.add("full");
+      div.textContent = "額滿";
+      cal.appendChild(div);
+      continue;
+    }
+
+    // 可預訂
+    div.classList.add("free");
     div.textContent = d;
+    div.onclick = () => {
+      window.location.href = `index.html?house=${house}&date=${dateStr}`;
+    };
+
+    // 今天
+    if (cellDate.getTime() === today.getTime()) {
+      div.classList.add("today");
+    }
+
     cal.appendChild(div);
-    continue;
   }
-
-  // === 六日粉紅底（優先級：低於可預訂、高於今天圈） ===
-  if (isWeekend) {
-    div.classList.add("weekend");
-  }
-
-  // === 春節強調 ===
-  if (HOLIDAYS[dateStr] === "春節") {
-    div.classList.remove("weekend");
-    div.classList.add("newyear");
-  }
-
-  // === 其他節日（黃色） ===
-  if (HOLIDAYS[dateStr] && HOLIDAYS[dateStr] !== "春節") {
-    div.classList.add("holiday");
-  }
-
-  // === 額滿（最高優先） ===
-  if (isFull) {
-    div.classList.add("full");
-    div.textContent = "額滿";
-    cal.appendChild(div);
-    continue;
-  }
-
-  // === 可預訂（覆蓋週末背景） ===
-  div.classList.add("free");
-  div.textContent = d;
-
-  div.onclick = () => {
-    const house = document.getElementById("house").value;
-    window.location.href = `index.html?house=${house}&date=${dateStr}`;
-  };
-
-  // === 今天圈起來（不蓋背景） ===
-  if (isToday) {
-    div.classList.add("today");
-  }
-
-  // === 顯示節日文字（可選） ===
-  if (HOLIDAYS[dateStr]) {
-    div.innerHTML = `${d}<br><small>${HOLIDAYS[dateStr]}</small>`;
-  }
-
-  cal.appendChild(div);
 }
 
-
-}
-
-async function loadCalendar() {
-  await initRoomData();  // ← 只會跑一次
-  generateCalendar();    // ← 超快渲染
+// ★ 每次都重新抓最新房況
+async function refreshCalendar() {
+  await loadRoomStatus();
+  generateCalendar();
 }
 
 // 月份切換
 document.getElementById("prev").onclick = () => {
   currentMonth--;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  generateCalendar(); // 不再打 API
+  refreshCalendar();
 };
 
 document.getElementById("next").onclick = () => {
   currentMonth++;
   if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  generateCalendar();
+  refreshCalendar();
 };
 
-document.getElementById("house").addEventListener("change", generateCalendar);
+// 切換館別
+document.getElementById("house").onchange = refreshCalendar;
 
 // 初始化
-loadCalendar();
+refreshCalendar();
 </script>
 
 </body>
