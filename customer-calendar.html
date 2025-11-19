@@ -38,8 +38,9 @@
 
   .week-header div:nth-child(1),
   .week-header div:nth-child(7) {
-  color: red;  /* 星期日紅色（可選） */
+    color: red;
   }
+
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -47,38 +48,37 @@
   }
 
   /* 日期格子（基底） */
-.day {
-  padding: 12px 4px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  text-align: center;
-  font-size: 20px;
-  position: relative;
-}
+  .day {
+    padding: 12px 4px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+    font-size: 20px;
+    position: relative;
+  }
 
-/* 六日：假日（淡紅背景） */
-.weekend {
-  background: #ffe5e5;  /* 淡紅色 */
-  color: #d40000;
-  font-weight: 700;
-}
+  /* 六日粉色底 */
+  .weekend {
+    background: #ffe5e5;
+    color: #b40000;
+    font-weight: 700;
+  }
 
-/* 可預訂：綠色（覆蓋假日） */
-.free {
-  background: #77dd77 !important;
-  color: white !important;
-  font-weight: 900;
-  cursor: pointer;
-}
+  /* 可預訂：覆蓋週末 */
+  .free {
+    background: #77dd77 !important;
+    color: #ffffff !important;
+    font-weight: 900;
+    cursor: pointer;
+  }
 
-/* 額滿：紅框 + 白底（優先顯示） */
-.full {
-  background: #ffffff !important;
-  color: red !important;
-  font-weight: 900;
-  border: 2px solid red !important;
-}
-
+  /* 額滿：最高優先級 */
+  .full {
+    background: #ffffff !important;
+    color: red !important;
+    font-weight: 900;
+    border: 2px solid red !important;
+  }
 
   .house-switch {
     margin-bottom: 20px;
@@ -98,14 +98,14 @@
   </select>
 </div>
 
-<!-- 月份切換列 -->
+<!-- 月份切換 -->
 <div class="month-nav">
   <div id="prev" class="nav-btn">← 上個月</div>
   <div id="monthLabel"></div>
   <div id="next" class="nav-btn">下個月 →</div>
 </div>
 
-<!-- 星期顯示列 -->
+<!-- 星期列 -->
 <div class="week-header">
   <div>日</div>
   <div>一</div>
@@ -119,26 +119,29 @@
 <div id="calendar" class="calendar"></div>
 
 <script>
-// ★★★ Your GAS API ★★★
+// ★★★ GAS API ★★★
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+
+// === 前端快取（只載入一次） ===
+let CACHE = null;
 
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-// === 取得房況並產生日曆 ===
-async function loadCalendar() {
-  const house = document.getElementById("house").value;
+// === 第一次載入：抓一年資料，只打一次 API ===
+async function initRoomData() {
+  if (CACHE) return; // 已抓過 → 不重複打 API
 
   const res = await fetch(API + "?action=getRoomStatus");
-  const data = await res.json();
-  const fullDates = data[house];
-
-  generateCalendar(fullDates);
+  CACHE = await res.json();   // 存到全域變數
 }
 
-// === 產生指定年月的日曆 ===
-function generateCalendar(fullDates) {
+// === 產生日曆 ===
+function generateCalendar() {
+  const house = document.getElementById("house").value;
+  const fullDates = CACHE[house];
+
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
 
@@ -149,68 +152,61 @@ function generateCalendar(fullDates) {
   const days = new Date(currentYear, currentMonth + 1, 0).getDate();
 
   // 補空白
-  for (let i = 0; i < first; i++) {
-    cal.innerHTML += `<div></div>`;
-  }
+  for (let i = 0; i < first; i++) cal.innerHTML += `<div></div>`;
 
-  // 日期格
+  // 日期
   for (let d = 1; d <= days; d++) {
-  const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  const isFull = fullDates.includes(dateStr);
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const isFull = fullDates.includes(dateStr);
 
-  const div = document.createElement("div");
-  div.classList.add("day");
+    const div = document.createElement("div");
+    div.classList.add("day");
 
-  // 判斷星期幾（0 日～ 6 六）
-  const dow = new Date(currentYear, currentMonth, d).getDay();
-  const isWeekend = (dow === 0 || dow === 6);
+    // 判斷六日
+    const dow = new Date(currentYear, currentMonth, d).getDay();
+    const isWeekend = (dow === 0 || dow === 6);
+    if (isWeekend) div.classList.add("weekend");
 
-  // === 先加週末底色（粉色）===
-  if (isWeekend) {
-    div.classList.add("weekend");
+    // 額滿
+    if (isFull) {
+      div.classList.add("full");
+      div.textContent = "額滿";
+    } 
+    else {
+      // 可預訂
+      div.classList.add("free");
+      div.textContent = d;
+
+      div.onclick = () => {
+        window.location.href = `index.html?house=${house}&date=${dateStr}`;
+      };
+    }
+
+    cal.appendChild(div);
   }
-
-  // === 額滿（最高優先級）===
-  if (isFull) {
-    div.classList.add("full");
-    div.textContent = "額滿";
-  } 
-  else {
-    // === 有空房 ===
-    div.textContent = d;
-
-    // 可預訂（覆蓋粉色週末）
-    div.classList.add("free");
-
-    // 點擊跳轉預訂
-    div.onclick = () => {
-      const house = document.getElementById("house").value;
-      window.location.href = `index.html?house=${house}&date=${dateStr}`;
-    };
-  }
-
-  cal.appendChild(div);
 }
 
-
+async function loadCalendar() {
+  await initRoomData();  // ← 只會跑一次
+  generateCalendar();    // ← 超快渲染
 }
 
-// === 月份切換 ===
+// 月份切換
 document.getElementById("prev").onclick = () => {
   currentMonth--;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  loadCalendar();
+  generateCalendar(); // 不再打 API
 };
 
 document.getElementById("next").onclick = () => {
   currentMonth++;
   if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  loadCalendar();
+  generateCalendar();
 };
 
-document.getElementById("house").addEventListener("change", loadCalendar);
+document.getElementById("house").addEventListener("change", generateCalendar);
 
-// 初始化日曆
+// 初始化
 loadCalendar();
 </script>
 
