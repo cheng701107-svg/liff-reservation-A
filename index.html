@@ -7,7 +7,7 @@
 
 <style>
     body {
-        font-family: Arial,"Microsoft JhengHei";
+        font-family: Arial, "Microsoft JhengHei";
         background: #f2f2f2;
         margin: 0;
         padding: 0;
@@ -25,7 +25,8 @@
     h2 {
         text-align: center;
         color: #06c755;
-        font-size: 28px;
+        font-size: 30px;
+        font-weight: 700;
         margin-bottom: 30px;
     }
 
@@ -38,11 +39,25 @@
 
     select, input, textarea {
         width: 100%;
+        max-width: 100%;
         padding: 20px;
         font-size: 20px;
         margin-top: 10px;
         border-radius: 12px;
         border: 1px solid #ccc;
+        box-sizing: border-box; /* ★ 防止溢位 */
+    }
+
+    /* 日期按鈕溢位修正（Chrome/Android） */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        margin-right: 0;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+    }
+    input[type="date"] {
+        padding-right: 20px;
+        overflow: hidden;
     }
 
     button {
@@ -61,21 +76,15 @@
     button:active {
         opacity: 0.8;
     }
-
-    .disabled-date {
-        background: #ddd;
-        color: #aaa;
-        pointer-events: none;
-    }
 </style>
 </head>
 
 <body>
-
 <div class="container">
+
     <h2>靖寬靖廣 — 包棟預訂</h2>
 
-    <!-- 館別 -->
+    <!-- 館別（必填） -->
     <label>🏡 館別（必填）</label>
     <select id="house" required onchange="loadDisabledDates()">
         <option value="">請選擇館別</option>
@@ -83,9 +92,9 @@
         <option value="B館">B館</option>
     </select>
 
-    <!-- 包棟日期 -->
+    <!-- 包棟日期（必填） -->
     <label>📅 包棟日期（必填）</label>
-    <input type="date" id="date" required />
+    <input type="date" id="date" required disabled />
 
     <!-- 包棟天數 -->
     <label>🌙 包棟天數</label>
@@ -137,14 +146,15 @@
 
     <!-- 送出 -->
     <button onclick="submitForm()">送出預訂資料</button>
+
 </div>
 
-
 <script>
-/* ★★★ 你的 GAS API URL ★★★ */
-const API_URL = "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+/* 你的 GAS API URL */
+const API_URL =
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-let disabledDates = [];  // 儲存已滿日期
+let disabledDates = []; // 儲存已滿日期
 
 /* ----------------------------------------------------
    根據館別載入已滿日期
@@ -161,20 +171,19 @@ async function loadDisabledDates() {
     }
 
     dateInput.disabled = false;
+    dateInput.value = "";
+    dateInput.min = today();
 
     const res = await fetch(API_URL + "?action=getRoomStatus");
     const data = await res.json();
 
     disabledDates = data[house] || [];
-
-    dateInput.value = "";
-    dateInput.setAttribute("min", today());
 }
 
 /* ----------------------------------------------------
-   日期變更 → 檢查是否是滿房
+   日期變更 → 檢查是否為滿房
 ---------------------------------------------------- */
-document.getElementById("date").addEventListener("change", function() {
+document.getElementById("date").addEventListener("change", function () {
     if (disabledDates.includes(this.value)) {
         alert("⚠ 此日期已滿房，請選擇其他日期");
         this.value = "";
