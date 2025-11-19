@@ -163,17 +163,24 @@ function generateCalendar(fullDates) {
 
   // 判斷星期幾（0 日～ 6 六）
   const dow = new Date(currentYear, currentMonth, d).getDay();
-  if (dow === 0 || dow === 6) {
-    div.classList.add("weekend");  // 六日紅底
+  const isWeekend = (dow === 0 || dow === 6);
+
+  // === 先加週末底色（粉色）===
+  if (isWeekend) {
+    div.classList.add("weekend");
   }
 
-  // 套用額滿 / 可預訂顏色
+  // === 額滿（最高優先級）===
   if (isFull) {
     div.classList.add("full");
     div.textContent = "額滿";
-  } else {
-    div.classList.add("free");
+  } 
+  else {
+    // === 有空房 ===
     div.textContent = d;
+
+    // 可預訂（覆蓋粉色週末）
+    div.classList.add("free");
 
     // 點擊跳轉預訂
     div.onclick = () => {
@@ -184,6 +191,7 @@ function generateCalendar(fullDates) {
 
   cal.appendChild(div);
 }
+
 
 }
 
