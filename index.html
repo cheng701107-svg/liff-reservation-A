@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>靖寬靖廣 — 包棟預訂</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+    body {
+        font-family: Arial,"Microsoft JhengHei";
+        background: #f2f2f2;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding: 26px;
+        border-radius: 16px;
+        margin-top: 20px;
+    }
+
+    h2 {
+        text-align: center;
+        color: #06c755;
+        font-size: 28px;
+        margin-bottom: 30px;
+    }
+
+    label {
+        font-size: 22px;
+        font-weight: bold;
+        display: block;
+        margin-top: 20px;
+    }
+
+    select, input, textarea {
+        width: 100%;
+        padding: 20px;
+        font-size: 20px;
+        margin-top: 10px;
+        border-radius: 12px;
+        border: 1px solid #ccc;
+    }
+
+    button {
+        width: 100%;
+        padding: 22px;
+        font-size: 24px;
+        background: #06c755;
+        color: white;
+        border: none;
+        border-radius: 14px;
+        margin-top: 30px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    button:active {
+        opacity: 0.8;
+    }
+
+    .disabled-date {
+        background: #ddd;
+        color: #aaa;
+        pointer-events: none;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>靖寬靖廣 — 包棟預訂</h2>
+
+    <!-- 館別 -->
+    <label>🏡 館別（必填）</label>
+    <select id="house" required onchange="loadDisabledDates()">
+        <option value="">請選擇館別</option>
+        <option value="A館">A館</option>
+        <option value="B館">B館</option>
+    </select>
+
+    <!-- 包棟日期 -->
+    <label>📅 包棟日期（必填）</label>
+    <input type="date" id="date" required />
+
+    <!-- 包棟天數 -->
+    <label>🌙 包棟天數</label>
+    <select id="days">
+        <option value="1">1 晚</option>
+        <option value="2">2 晚</option>
+        <option value="3">3 晚</option>
+    </select>
+
+    <!-- 姓名 -->
+    <label>👤 姓名（必填）</label>
+    <input id="name" required />
+
+    <!-- 手機 -->
+    <label>📱 手機（必填）</label>
+    <input id="phone" type="tel" required />
+
+    <!-- 大人 -->
+    <label>🧑 大人（必填）</label>
+    <select id="adult" required>
+        <option value="">請選擇</option>
+        <script>
+            for (let i = 6; i <= 25; i++) {
+                document.write(`<option value="${i}">${i} 位</option>`);
+            }
+        </script>
+    </select>
+
+    <!-- 小孩 -->
+    <label>🧒 小孩</label>
+    <select id="child">
+        <script>
+            for (let i = 0; i <= 10; i++) {
+                document.write(`<option value="${i}">${i} 位</option>`);
+            }
+        </script>
+    </select>
+
+    <!-- 寵物 -->
+    <label>🐶 寵物</label>
+    <select id="pet">
+        <option value="無">無</option>
+        <option value="有">有</option>
+    </select>
+
+    <!-- 備註 -->
+    <label>📝 需求內容（備註）</label>
+    <textarea id="note" rows="3"></textarea>
+
+    <!-- 送出 -->
+    <button onclick="submitForm()">送出預訂資料</button>
+</div>
+
+
+<script>
+/* ★★★ 你的 GAS API URL ★★★ */
+const API_URL = "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+
+let disabledDates = [];  // 儲存已滿日期
+
+/* ----------------------------------------------------
+   根據館別載入已滿日期
+---------------------------------------------------- */
+async function loadDisabledDates() {
+    const house = document.getElementById("house").value;
+    const dateInput = document.getElementById("date");
+
+    if (!house) {
+        disabledDates = [];
+        dateInput.disabled = true;
+        dateInput.value = "";
+        return;
+    }
+
+    dateInput.disabled = false;
+
+    const res = await fetch(API_URL + "?action=getRoomStatus");
+    const data = await res.json();
+
+    disabledDates = data[house] || [];
+
+    dateInput.value = "";
+    dateInput.setAttribute("min", today());
+}
+
+/* ----------------------------------------------------
+   日期變更 → 檢查是否是滿房
+---------------------------------------------------- */
+document.getElementById("date").addEventListener("change", function() {
+    if (disabledDates.includes(this.value)) {
+        alert("⚠ 此日期已滿房，請選擇其他日期");
+        this.value = "";
+    }
+});
+
+/* ----------------------------------------------------
+   今日日期
+---------------------------------------------------- */
+function today() {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+}
+
+/* ----------------------------------------------------
+   送出表單 → 導向 resultSend.html
+---------------------------------------------------- */
+function submitForm() {
+    const house = document.getElementById("house").value;
+    const date = document.getElementById("date").value;
+    const days = document.getElementById("days").value;
+    const name = document.getElementById("name").value;
+    const phone = document.getElementById("phone").value;
+    const adult = document.getElementById("adult").value;
+    const child = document.getElementById("child").value;
+    const pet = document.getElementById("pet").value;
+    const note = document.getElementById("note").value;
+
+    if (!house || !date || !name || !phone || !adult) {
+        alert("請填寫所有必填欄位");
+        return;
+    }
+
+    const params = new URLSearchParams({
+        house, date, days, name, phone, adult, child, pet, note
+    });
+
+    window.location.href = "resultSend.html?" + params.toString();
+}
+</script>
+
+</body>
+</html>
