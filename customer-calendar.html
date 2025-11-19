@@ -46,27 +46,39 @@
     gap: 8px;
   }
 
-  .day {
-    padding: 12px 4px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    text-align: center;
-    font-size: 20px;
-  }
+  /* 日期格子（基底） */
+.day {
+  padding: 12px 4px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  text-align: center;
+  font-size: 20px;
+  position: relative;
+}
 
-  .free {
-    background: #77dd77;
-    color: white;
-    font-weight: 700;
-    cursor: pointer;
-  }
+/* 六日：假日（淡紅背景） */
+.weekend {
+  background: #ffe5e5;  /* 淡紅色 */
+  color: #d40000;
+  font-weight: 700;
+}
 
-  .full {
-    background: #ffffff;
-    color: red;
-    font-weight: 800;
-    border: 2px solid red;
-  }
+/* 可預訂：綠色（覆蓋假日） */
+.free {
+  background: #77dd77 !important;
+  color: white !important;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* 額滿：紅框 + 白底（優先顯示） */
+.full {
+  background: #ffffff !important;
+  color: red !important;
+  font-weight: 900;
+  border: 2px solid red !important;
+}
+
 
   .house-switch {
     margin-bottom: 20px;
