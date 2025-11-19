@@ -37,8 +37,8 @@
   }
 
   /* 六日紅字 */
-  .week-header div:nth-child(1), /* 日 */
-  .week-header div:nth-child(7)  /* 六 */ {
+  .week-header div:nth-child(1),
+  .week-header div:nth-child(7) {
     color: red;
     font-weight: 900;
   }
@@ -49,7 +49,6 @@
     gap: 8px;
   }
 
-  /* 日期格子（基底） */
   .day {
     padding: 12px 4px;
     border-radius: 8px;
@@ -59,11 +58,10 @@
     position: relative;
   }
 
-  /* 六日粉紅底 */
+  /* 六日粉色背景 */
   .weekend {
     background: #ffe5e5 !important;
     color: #b40000 !important;
-    font-weight: 700;
   }
 
   /* 額滿 */
@@ -74,7 +72,7 @@
     font-weight: 900;
   }
 
-  /* 可預訂 */
+  /* 尚未滿 */
   .free {
     background: #77dd77 !important;
     color: white !important;
@@ -100,14 +98,12 @@
   </select>
 </div>
 
-<!-- 月份切換 -->
 <div class="month-nav">
   <div id="prev" class="nav-btn">← 上個月</div>
   <div id="monthLabel"></div>
   <div id="next" class="nav-btn">下個月 →</div>
 </div>
 
-<!-- 星期列（新增） -->
 <div class="week-header">
   <div>日</div>
   <div>一</div>
@@ -121,7 +117,7 @@
 <div id="calendar" class="calendar"></div>
 
 <script>
-// ★ GAS API
+// ★ 你的 GAS API
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
@@ -130,13 +126,13 @@ let CACHE = null;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-// 讀取房況（快取）
+// 初始化：只抓一次房況
 async function initRoomData() {
-  if (CACHE) return;
   const res = await fetch(API + "?action=getRoomStatus");
   CACHE = await res.json();
 }
 
+// 業主版 calendar
 function generateCalendar() {
   const house = document.getElementById("house").value;
   const fullDates = CACHE[house];
@@ -159,25 +155,29 @@ function generateCalendar() {
   today.setHours(0,0,0,0);
 
   for (let d = 1; d <= days; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const dateStr =
+      `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
     const div = document.createElement("div");
     div.classList.add("day");
 
     const cellDate = new Date(currentYear, currentMonth, d);
-    cellDate.setHours(0,0,0,0);
+    cellDate.setHours(0, 0, 0, 0);
 
-    // 六日判斷
     const dow = cellDate.getDay();
-    const isWeekend = (dow === 0 || dow === 6);
-    if (isWeekend) {
-      div.classList.add("weekend");
+    if (dow === 0 || dow === 6) div.classList.add("weekend");
+
+    // 今日框起來
+    if (cellDate.getTime() === today.getTime()) {
+      div.classList.add("today");
     }
 
-    // 額滿
+    // 已滿
     if (fullDates.includes(dateStr)) {
       div.classList.add("full");
       div.textContent = "滿";
+
+      div.onclick = () => updateRoom(dateStr, house, "");
       cal.appendChild(div);
       continue;
     }
@@ -186,42 +186,48 @@ function generateCalendar() {
     div.classList.add("free");
     div.textContent = d;
 
-    // 今天圈起來
-    if (cellDate.getTime() === today.getTime()) {
-      div.classList.add("today");
-    }
-
-    // 點擊切換房況
-    div.onclick = () => {
-      const newStatus = fullDates.includes(dateStr) ? "" : "滿";
-      fetch(API, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "updateRoomStatus",
-          admin_key: "admin2025",
-          house,
-          date: dateStr,
-          status: newStatus
-        })
-      }).then(() => {
-        CACHE[house] = CACHE[house].includes(dateStr)
-          ? CACHE[house].filter(x => x !== dateStr)
-          : [...CACHE[house], dateStr];
-
-        generateCalendar();
-      });
-    };
+    div.onclick = () => updateRoom(dateStr, house, "滿");
 
     cal.appendChild(div);
   }
 }
 
+// ★ 修正後真正能寫入 GAS 的 function
+async function updateRoom(dateStr, house, status) {
+  const body = {
+    action: "updateRoomStatus",
+    admin_key: "admin2025",
+    house,
+    date: dateStr,
+    status
+  };
+
+  const res = await fetch(API, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+
+  const json = await res.json();
+
+  if (json.success) {
+    // 更新快取
+    if (status === "滿") {
+      CACHE[house].push(dateStr);
+    } else {
+      CACHE[house] = CACHE[house].filter(x => x !== dateStr);
+    }
+
+    generateCalendar();
+  } else {
+    alert("更新失敗：" + json.error);
+  }
+}
+
 async function loadCalendar() {
-  await initRoomData();
+  if (!CACHE) await initRoomData();
   generateCalendar();
 }
 
-// 月份切換
 document.getElementById("prev").onclick = () => {
   currentMonth--;
   if (currentMonth < 0) {
@@ -242,7 +248,7 @@ document.getElementById("next").onclick = () => {
 
 document.getElementById("house").addEventListener("change", generateCalendar);
 
-// 載入
+// 啟動
 loadCalendar();
 </script>
 
