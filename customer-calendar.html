@@ -26,6 +26,18 @@
     color: #06c755;
   }
 
+  /* 星期列 */
+  .week-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 10px;
+    font-size: 20px;
+  }
+
+  .week-header div:nth-child(1) { color: red; }  /* 星期日紅色（可選） */
+
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -79,10 +91,21 @@
   <div id="next" class="nav-btn">下個月 →</div>
 </div>
 
+<!-- 星期顯示列 -->
+<div class="week-header">
+  <div>日</div>
+  <div>一</div>
+  <div>二</div>
+  <div>三</div>
+  <div>四</div>
+  <div>五</div>
+  <div>六</div>
+</div>
+
 <div id="calendar" class="calendar"></div>
 
 <script>
-// ★★★ 你的 GAS API ★★★
+// ★★★ Your GAS API ★★★
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
@@ -118,7 +141,7 @@ function generateCalendar(fullDates) {
 
   // 日期格
   for (let d = 1; d <= days; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
     const isFull = fullDates.includes(dateStr);
 
     const div = document.createElement("div");
@@ -137,27 +160,21 @@ function generateCalendar(fullDates) {
 }
 
 // === 月份切換 ===
-document.getElementById("prev").onclick = function () {
+document.getElementById("prev").onclick = () => {
   currentMonth--;
-  if (currentMonth < 0) {
-    currentMonth = 11;
-    currentYear--;
-  }
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
   loadCalendar();
 };
 
-document.getElementById("next").onclick = function () {
+document.getElementById("next").onclick = () => {
   currentMonth++;
-  if (currentMonth > 11) {
-    currentMonth = 0;
-    currentYear++;
-  }
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
   loadCalendar();
 };
 
 document.getElementById("house").addEventListener("change", loadCalendar);
 
-// 初始化
+// 初始化日曆
 loadCalendar();
 </script>
 
