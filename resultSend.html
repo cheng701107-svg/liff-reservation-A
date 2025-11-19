@@ -40,10 +40,10 @@ const API_URL =
     const url = new URL(location.href);
 
     const house = url.searchParams.get("house");
-    const date = url.searchParams.get("date");
-    const days = url.searchParams.get("days");
-    const name = url.searchParams.get("name");   // ★已加入
-    const phone = url.searchParams.get("phone"); // ★已加入
+    const date  = url.searchParams.get("date");
+    const days  = url.searchParams.get("days");
+    const name  = url.searchParams.get("name");
+    const phone = url.searchParams.get("phone");
     const adult = url.searchParams.get("adult");
     const child = url.searchParams.get("child");
     const pet   = url.searchParams.get("pet");
@@ -68,31 +68,35 @@ const API_URL =
 
     await fetch(API_URL, {
         method: "POST",
+        headers: {                     /* ★★★ 必加！ */
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify(body)
     });
 
     /* ----------------------------------------------------
-       回傳訊息給使用者（已加入姓名與手機）
+       回傳訊息給使用者
     ---------------------------------------------------- */
     const msg =
 `📘 您的預訂已收到！
 
 👤 姓名：${name}
 📱 手機：${phone}
+
 🏡 館別：${house}
 📅 包棟日期：${date}
 🌙 包棟天數：${days} 晩
 🧑‍🧑‍🧒 大人：${adult} 位
 🧒 小孩：${child} 位
 🐶 寵物：${pet}
-📝 備註：${note || "無"}
+
+📝 備註：
+${note || "無"}
 
 我們會盡快與您聯繫，謝謝您！`;
 
     try {
-        await liff.sendMessages([
-            { type: "text", text: msg }
-        ]);
+        await liff.sendMessages([{ type: "text", text: msg }]);
     } catch (e) {
         console.error("訊息推播失敗：", e);
     }
