@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>靖寬靖廣 — 訂房查詢</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+    body {
+        font-family: Arial, "Microsoft JhengHei";
+        background: #f2f2f2;
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        background: #06c755;
+        color: white;
+        padding: 16px;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .container {
+        padding: 20px;
+        max-width: 560px;
+        margin: 0 auto;
+    }
+
+    label {
+        font-size: 20px;
+    }
+
+    input {
+        width: 100%;
+        padding: 18px;
+        font-size: 20px;
+        margin-top: 10px;
+        border-radius: 12px;
+        border: 1px solid #ccc;
+    }
+
+    button {
+        width: 100%;
+        padding: 18px;
+        margin-top: 20px;
+        font-size: 22px;
+        background: #06c755;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+
+    .result-box {
+        margin-top: 30px;
+        background: white;
+        padding: 18px;
+        border-radius: 12px;
+        display: none;
+    }
+
+    .record {
+        padding: 14px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .none {
+        color: red;
+        font-size: 20px;
+        padding: 20px 0;
+        text-align: center;
+    }
+</style>
+</head>
+
+<body>
+
+<header>靖寬靖廣 — 訂房查詢</header>
+
+<div class="container">
+
+    <label>📱 手機號碼</label>
+    <input id="phone" type="tel" placeholder="請輸入您的手機號碼" />
+
+    <button onclick="searchBooking()">查詢訂房紀錄</button>
+
+    <div id="resultBox" class="result-box"></div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+
+/* 查詢訂單 */
+async function searchBooking() {
+    const phone = document.getElementById("phone").value.trim();
+    const box = document.getElementById("resultBox");
+
+    if (!phone) {
+        alert("請輸入手機號碼");
+        return;
+    }
+
+    box.style.display = "block";
+    box.innerHTML = "查詢中…";
+
+    const res = await fetch(API_URL + "?phone=" + phone);
+    const data = await res.json();
+
+    if (data.length === 0) {
+        box.innerHTML = "<div class='none'>查無訂房紀錄</div>";
+        return;
+    }
+
+    let html = "";
+
+    data.forEach(d => {
+        html += `
+        <div class="record">
+            <div><b>訂單編號：</b>${d.id}</div>
+            <div><b>姓名：</b>${d.name}</div>
+            <div><b>手機：</b>${d.phone}</div>
+            <div><b>入住日：</b>${d.date}</div>
+            <div><b>天數：</b>${d.days} 晚</div>
+            <div><b>大人：</b>${d.adult}</div>
+            <div><b>小孩：</b>${d.child}</div>
+            <div><b>寵物：</b>${d.pet}</div>
+            <div><b>館別：</b>${d.house}</div>
+            <div><b>備註：</b>${d.note || "（無）"}</div>
+        </div>`;
+    });
+
+    box.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
