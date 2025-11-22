@@ -34,7 +34,7 @@ async function main() {
         await liff.init({ liffId: "2008409020-k4Oy7Y0D" });
 
         if (!liff.isLoggedIn()) {
-            liff.login();
+            liff.login({ redirectUri: window.location.href });
             return;
         }
 
@@ -78,26 +78,25 @@ async function main() {
         };
 
         /* ----------------------------------------------------
-           送出資料到 Google Sheet（含 headers）
+           送出資料到 Google Sheet
+           👉 重點：不要加 headers、加上 mode:"no-cors"
         ---------------------------------------------------- */
-        const res = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },   // ★ 必加！
-            body: JSON.stringify(body)
-        });
-
-        if (!res.ok) throw new Error("GAS API 連線失敗");
-
-        const json = await res.json();
-
-        if (!json.success) {
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify(body),
+                mode: "no-cors"
+            });
+            console.log("✅ 已將資料送到 GAS");
+        } catch (e) {
+            console.error("送到 GAS 失敗：", e);
             document.getElementById("status").innerText =
-                "❗ 寫入資料庫失敗：" + JSON.stringify(json);
+                "❗ 系統發生錯誤（寫入失敗）：" + e.message;
             return;
         }
 
         /* ----------------------------------------------------
-           寫入成功 → 回傳訊息給使用者
+           寫入成功（假設成功）→ 回傳訊息給使用者
         ---------------------------------------------------- */
         const msg =
 `📘 您的預訂已收到！
@@ -115,7 +114,12 @@ ${note || "無"}
 
 我們會盡快與您聯繫，謝謝您！`;
 
-        await liff.sendMessages([{ type: "text", text: msg }]);
+        try {
+            await liff.sendMessages([{ type: "text", text: msg }]);
+        } catch (e) {
+            console.error("回傳 LINE 訊息失敗：", e);
+            // 就算訊息沒成功送出，也不要阻止流程
+        }
 
         /* ----------------------------------------------------
            完成 → 關閉視窗
@@ -125,7 +129,7 @@ ${note || "無"}
     } catch (err) {
         console.error(err);
         document.getElementById("status").innerText =
-            "❗ 系統發生錯誤：" + err.message;
+            "❗ 系統發生錯誤：" + (err.message || err);
     }
 }
 
