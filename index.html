@@ -172,43 +172,50 @@
 </div>
 
 <script>
-// === 方案 B：沒有帶日期 & 館別 → 自動跳到房況日曆 ===
-(function checkSource() {
-  const url = new URL(location.href);
-  const house = url.searchParams.get("house");
-  const date = url.searchParams.get("date");
+// === 常數設定 ===
+const LIFF_ID = "2008409020-k4Oy7Y0D";
 
-  if (!house || !date) {
-    window.location.href = "customer-calendar.html";
-  }
-})();
+// === LIFF 初始化 + URL 檢查 + 自動帶入欄位 ===
+async function init() {
+  // 1. 初始化 LIFF
+  await liff.init({ liffId: LIFF_ID });
 
-
-// === LIFF 初始化 ===
-async function initLIFF() {
-  await liff.init({ liffId: "2008409020-k4Oy7Y0D" });
-
+  // 2. 未登入就登入（帶上目前網址，保留 ?house=&date=）
   if (!liff.isLoggedIn()) {
-    liff.login();
+    liff.login({ redirectUri: window.location.href });
     return;
   }
 
+  // 3. 取得網址參數
+  const url = new URL(location.href);
+  const house = url.searchParams.get("house");
+  const date  = url.searchParams.get("date");
+
+  // 4. 如果沒有 house / date，再導回日曆（這時候已經是登入後，不會來回跳）
+  if (!house || !date) {
+    window.location.href = "customer-calendar.html";
+    return;
+  }
+
+  // 5. 帶入館別 & 日期
+  const houseSelect = document.getElementById("house");
+  const dateInput   = document.getElementById("date");
+  if (houseSelect) houseSelect.value = house;
+  if (dateInput)   dateInput.value   = date;
+
+  // 6. 抓 LINE 使用者資料（UID + 可選：顯示名稱）
   const profile = await liff.getProfile();
   document.getElementById("line_uid").value = profile.userId;
+
+  // 如果你想順便把 LINE 名稱帶到姓名欄位，也可以加這段：
+  const nameInput = document.getElementById("name");
+  if (nameInput && !nameInput.value) {
+    nameInput.value = profile.displayName || "";
+  }
 }
-initLIFF();
 
-
-// === 自動帶入館別 & 日期（從日曆傳來） ===
-(function autoFillFromURL() {
-  const url = new URL(location.href);
-
-  const house = url.searchParams.get("house");
-  const date = url.searchParams.get("date");
-
-  if (house) document.getElementById("house").value = house;
-  if (date) document.getElementById("date").value = date;
-})();
+// DOM 載完後執行初始化
+document.addEventListener("DOMContentLoaded", init);
 
 
 // === 提交表單 ===
@@ -228,19 +235,20 @@ document.getElementById("liffForm").addEventListener("submit", function(e) {
 
   const params = new URLSearchParams();
   params.append("house", document.getElementById("house").value);
-  params.append("date", document.getElementById("date").value);
-  params.append("days", document.getElementById("days").value);
-  params.append("name", document.getElementById("name").value);
+  params.append("date",  document.getElementById("date").value);
+  params.append("days",  document.getElementById("days").value);
+  params.append("name",  document.getElementById("name").value);
   params.append("phone", phone);
   params.append("adult", document.getElementById("adult").value);
   params.append("child", document.getElementById("child").value);
-  params.append("pet", document.getElementById("pet").value);
-  params.append("note", document.getElementById("note").value);
-  params.append("uid", document.getElementById("line_uid").value);
+  params.append("pet",   document.getElementById("pet").value);
+  params.append("note",  document.getElementById("note").value);
+  params.append("uid",   document.getElementById("line_uid").value);
 
   window.location.href = "resultSend.html?" + params.toString();
 });
 </script>
+
 
 </body>
 </html>
