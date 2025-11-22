@@ -132,19 +132,33 @@
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
+/**
+ * 房況快取結構改成：
+ * fullData = {
+ *   "A館": Set(["2025-02-01", "2025-02-10", ...]),
+ *   "B館": Set([...])
+ * }
+ */
 let fullData = null;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-// ★ 每次都重新抓（不使用快取）
-async function loadRoomStatus() {
+/* ★ 只在第一次載入時抓資料，並把陣列轉成 Set */
+async function initRoomStatus() {
   const res = await fetch(API + "?action=getRoomStatus&v=" + Date.now());
-  fullData = await res.json();
+  const raw = await res.json(); // raw["A館"] 是陣列
+
+  fullData = {};
+  Object.keys(raw).forEach(house => {
+    fullData[house] = new Set(raw[house] || []);
+  });
 }
 
 function generateCalendar() {
+  if (!fullData) return; // 資料還沒載好就先不畫，保險一下
+
   const house = document.getElementById("house").value;
-  const fullDates = fullData[house];
+  const fullDatesSet = fullData[house] || new Set();
 
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
@@ -158,9 +172,12 @@ function generateCalendar() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
+  // 用 fragment 一次塞進去，減少重排
+  const frag = document.createDocumentFragment();
+
   // 補空格
   for (let i = 0; i < first; i++) {
-    cal.innerHTML += `<div></div>`;
+    frag.appendChild(document.createElement("div"));
   }
 
   for (let d = 1; d <= days; d++) {
@@ -178,17 +195,17 @@ function generateCalendar() {
     if (cellDate < today) {
       div.classList.add("disabled");
       div.textContent = d;
-      cal.appendChild(div);
+      frag.appendChild(div);
       continue;
     }
 
     if (isWeekend) div.classList.add("weekend");
 
-    // 額滿
-    if (fullDates.includes(dateStr)) {
+    // 額滿：改用 Set.has()，比陣列 includes() 快
+    if (fullDatesSet.has(dateStr)) {
       div.classList.add("full");
       div.textContent = "額滿";
-      cal.appendChild(div);
+      frag.appendChild(div);
       continue;
     }
 
@@ -204,35 +221,40 @@ function generateCalendar() {
       div.classList.add("today");
     }
 
-    cal.appendChild(div);
+    frag.appendChild(div);
   }
+
+  cal.appendChild(frag);
 }
 
-// ★ 每次都重新抓最新房況
-async function refreshCalendar() {
-  await loadRoomStatus();
+/* ★ 初始化：只抓一次房況，之後切月都只重畫 */
+async function refreshCalendarFirstTime() {
+  if (!fullData) {
+    await initRoomStatus();
+  }
   generateCalendar();
 }
 
-// 月份切換
+// 月份切換：不再打 API，只重畫
 document.getElementById("prev").onclick = () => {
   currentMonth--;
   if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  refreshCalendar();
+  generateCalendar();
 };
 
 document.getElementById("next").onclick = () => {
   currentMonth++;
   if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  refreshCalendar();
+  generateCalendar();
 };
 
-// 切換館別
-document.getElementById("house").onchange = refreshCalendar;
+// 切換館別：同樣只重畫
+document.getElementById("house").onchange = generateCalendar;
 
 // 初始化
-refreshCalendar();
+refreshCalendarFirstTime();
 </script>
+
 
 </body>
 </html>
