@@ -705,11 +705,12 @@ async function updateRoomFull(house, date, status) {
     // ✅ 後端成功 → 重新整理 iframe 裡的房況日曆
     const iframe = document.querySelector(".room-calendar-frame");
     if (iframe && iframe.contentWindow) {
-      // 若 room-calendar.html 有暴露 loadCalendar，就直接叫它重新抓
-      if (typeof iframe.contentWindow.loadCalendar === "function") {
-        iframe.contentWindow.loadCalendar();
+      const win = iframe.contentWindow;
+      if (typeof win.loadCalendar === "function") {
+        // 強制重抓最新房況
+        win.loadCalendar(true);
       } else {
-        // 萬一拿不到 function，就用重新載入 iframe 的方式
+        // 保險作法：整個 iframe 重載
         iframe.src = iframe.src;
       }
     }
@@ -717,6 +718,7 @@ async function updateRoomFull(house, date, status) {
     console.warn("房況 API 回傳非 JSON，略過解析", e);
   }
 }
+
 
 
 /* 搜尋按鈕 */
