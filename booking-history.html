@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>靖寬靖廣 — 訂房查詢</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<style>
+    body {
+        font-family: Arial, "Microsoft JhengHei";
+        background: #f2f2f2;
+        margin: 0;
+        padding: 0;
+    }
+
+    header {
+        background: #06c755;
+        color: white;
+        padding: 16px;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .container {
+        padding: 20px;
+        max-width: 560px;
+        margin: 0 auto;
+    }
+
+    .loading {
+        font-size: 18px;
+        text-align: center;
+        padding: 20px 0;
+        color: #666;
+    }
+
+    .result-box {
+        margin-top: 10px;
+        background: white;
+        padding: 18px;
+        border-radius: 12px;
+        display: none;
+    }
+
+    .record {
+        padding: 14px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 16px;
+    }
+
+    .record:last-child {
+        border-bottom: none;
+    }
+
+    .none {
+        color: red;
+        font-size: 18px;
+        padding: 20px 0;
+        text-align: center;
+    }
+
+    .error {
+        color: #d32f2f;
+        font-size: 16px;
+        padding: 20px 0;
+        text-align: center;
+    }
+</style>
+</head>
+
+<body>
+
+<header>靖寬靖廣 — 訂房查詢</header>
+
+<div class="container">
+    <div id="status" class="loading">系統正在查詢您的訂房紀錄，請稍候…</div>
+    <div id="resultBox" class="result-box"></div>
+</div>
+
+<script>
+// ★ GAS API（請確保後端支援用 uid 查詢）
+const API_URL =
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+
+// ★ 你的 LIFF ID（沿用你目前專案的）
+const LIFF_ID = "2008409020-k4Oy7Y0D";
+
+/* 入口：初始化 LIFF 並查詢訂房紀錄 */
+document.addEventListener("DOMContentLoaded", () => {
+  initLiffAndSearch();
+});
+
+async function initLiffAndSearch() {
+  const statusEl = document.getElementById("status");
+  const resultBox = document.getElementById("resultBox");
+
+  try {
+    // 1. 初始化 LIFF
+    await liff.init({ liffId: LIFF_ID });
+
+    // 2. 若尚未登入，要求登入（理論上從圖文選單點開會在 LINE 內）
+    if (!liff.isLoggedIn()) {
+      liff.login({ redirectUri: window.location.href });
+      return;
+    }
+
+    // 3. 取得使用者 profile → userId
+    const profile = await liff.getProfile();
+    const uid = profile.userId;
+
+    console.log("UID from LIFF:", uid);
+
+    if (!uid) {
+      statusEl.textContent = "無法取得使用者資料，請稍後再試。";
+      statusEl.className = "error";
+      return;
+    }
+
+    // 4. 呼叫 GAS，用 uid 查詢訂房紀錄
+    statusEl.textContent = "正在讀取您的訂房紀錄…";
+
+    const res = await fetch(API_URL + "?uid=" + encodeURIComponent(uid));
+    if (!res.ok) {
+      throw new Error("伺服器回應錯誤：" + res.status);
+    }
+
+    const data = await res.json();
+
+    statusEl.style.display = "none";
+    resultBox.style.display = "block";
+
+    // 5. 沒有紀錄
+    if (!Array.isArray(data) || data.length === 0) {
+      resultBox.innerHTML = "<div class='none'>目前查無您的訂房紀錄</div>";
+      return;
+    }
+
+    // 6. 有紀錄 → 顯示
+    let html = "";
+    data.forEach(d => {
+      html += `
+        <div class="record">
+          <div><b>訂單編號：</b>${d.id || ""}</div>
+          <div><b>姓名：</b>${d.name || ""}</div>
+          <div><b>入住日：</b>${d.date || ""}</div>
+          <div><b>天數：</b>${d.days || ""} 晚</div>
+          <div><b>大人：</b>${d.adult || ""}</div>
+          <div><b>小孩：</b>${d.child || ""}</div>
+          <div><b>寵物：</b>${d.pet || "（無）"}</div>
+          <div><b>館別：</b>${d.house || ""}</div>
+          <div><b>手機：</b>${d.phone || ""}</div>
+          <div><b>備註：</b>${d.note || "（無）"}</div>
+        </div>
+      `;
+    });
+
+    resultBox.innerHTML = html;
+
+  } catch (err) {
+    console.error("查詢發生錯誤：", err);
+    resultBox.style.display = "block";
+    resultBox.innerHTML =
+      "<div class='error'>系統發生錯誤，請稍後再試，或洽詢管家協助。</div>";
+    const statusEl2 = document.getElementById("status");
+    statusEl2.style.display = "none";
+  }
+}
+</script>
+
+</body>
+</html>
