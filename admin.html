@@ -697,11 +697,9 @@ async function updateBookingPayment(booking, newPayment) {
 
 /* 更新房況管理表（讓 room-calendar.html 看到「滿」或空） */
 async function updateRoomFull(house, date, status) {
-  if (!house || !date) {
-    console.warn("updateRoomFull 缺少資料", { house, date, status });
-    return;
-  }
+  if (!house || !date) return;
 
+  // 一律轉成 YYYY-MM-DD
   const dateStr = formatDateOnly(date);
 
   const payload = {
@@ -709,43 +707,42 @@ async function updateRoomFull(house, date, status) {
     admin_key: ADMIN_KEY,
     house,
     date: dateStr,
-    status  // "滿" 或 ""
+    status  // "滿" or ""
   };
 
-  console.log("POST /updateRoomStatus", payload);
+  console.log("觸發房況更新", { house, dateForRoom: dateStr, newStatus: status });
 
   const res = await fetch(API_URL, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
-  let json;
   try {
-    json = await res.json();
+    const json = await res.json();
+    console.log("updateRoomStatus 回傳", json);
+
+    if (!json.success) {
+      console.error("更新房況失敗", json);
+      return;
+    }
+
+    // ✅ 成功後請房況日曆重新「重抓 + 重畫」
+    const iframe = document.querySelector(".room-calendar-frame");
+    if (iframe && iframe.contentWindow) {
+      if (typeof iframe.contentWindow.loadCalendar === "function") {
+        console.log("呼叫 iframe.loadCalendar(true)");
+        iframe.contentWindow.loadCalendar(true);   // ★ 強制重抓 GAS
+      } else {
+        console.log("找不到 loadCalendar，改用重新設定 src");
+        const baseSrc = iframe.src.split("#")[0].split("?")[0];
+        iframe.src = baseSrc + "?t=" + Date.now();
+      }
+    }
   } catch (e) {
-    console.error("解析房況 API 回傳失敗", e);
-    alert("更新房況失敗（回傳格式錯誤）");
-    return;
-  }
-
-  console.log("✅ updateRoomStatus 回傳", json);
-
-  if (!json.success) {
-    console.error("更新房況失敗", json);
-    alert("更新房況失敗：" + (json.error || "請稍後再試"));
-    return;
-  }
-
-  // ✅ 後端成功 → 直接重載 iframe，加上時間戳避免 cache
-  const iframe = document.querySelector(".room-calendar-frame");
-  if (iframe) {
-    const base = iframe.src.split("?")[0];
-    iframe.src = base + "?t=" + Date.now();
-    console.log("🔄 已重新載入房況日曆 iframe");
-  } else {
-    console.warn("找不到房況 iframe，無法重載");
+    console.warn("房況 API 回傳非 JSON，略過解析", e);
   }
 }
+
 
 /* 搜尋按鈕 */
 document.getElementById("btnSearch").addEventListener("click", () => {
