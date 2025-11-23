@@ -43,15 +43,20 @@ async function main() {
         ---------------------------------------------------- */
         const url = new URL(location.href);
 
-        const house = url.searchParams.get("house");
-        const date  = url.searchParams.get("date");
-        const days  = url.searchParams.get("days");
-        const name  = url.searchParams.get("name");
-        const phone = url.searchParams.get("phone");
-        const adult = url.searchParams.get("adult");
-        const child = url.searchParams.get("child");
-        const pet   = url.searchParams.get("pet");
-        const note  = url.searchParams.get("note") || "";
+        const house    = url.searchParams.get("house");
+        const date     = url.searchParams.get("date");
+        const days     = url.searchParams.get("days");
+        const name     = url.searchParams.get("name");
+        const phone    = url.searchParams.get("phone");
+        const adult    = url.searchParams.get("adult");
+        const child    = url.searchParams.get("child");
+        const pet      = url.searchParams.get("pet");
+        const note     = url.searchParams.get("note") || "";
+
+        // ★ 新增：從 URL 取得 uid / email / lineName
+        const uid      = url.searchParams.get("uid")      || "";
+        const email    = url.searchParams.get("email")    || "";
+        const lineName = url.searchParams.get("lineName") || "";
 
         /* 缺資料時停下來避免空值寫入 GAS */
         if (!house || !date || !name || !phone) {
@@ -61,11 +66,14 @@ async function main() {
         }
 
         /* ----------------------------------------------------
-           組合資料
+           組合資料（送給 GAS）
         ---------------------------------------------------- */
         const body = {
-            action: "add",
+            action:    "add",
             admin_key: "admin2025",
+            uid,          // user-id
+            email,        // E-mail
+            lineName,     // Line 名稱
             house,
             date,
             days,
@@ -102,39 +110,3 @@ async function main() {
 `📘 您的預訂已收到！
 
 👤 姓名：${name}
-📱 手機：${phone}
-🏡 館別：${house}
-📅 包棟日期：${date}
-🌙 包棟天數：${days} 晩
-🧑‍🧑‍🧒 大人：${adult} 位
-🧒 小孩：${child} 位
-🐶 寵物：${pet}
-📝 備註：
-${note || "無"}
-
-我們會盡快與您聯繫，謝謝您！`;
-
-        try {
-            await liff.sendMessages([{ type: "text", text: msg }]);
-        } catch (e) {
-            console.error("回傳 LINE 訊息失敗：", e);
-            // 就算訊息沒成功送出，也不要阻止流程
-        }
-
-        /* ----------------------------------------------------
-           完成 → 關閉視窗
-        ---------------------------------------------------- */
-        liff.closeWindow();
-
-    } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText =
-            "❗ 系統發生錯誤：" + (err.message || err);
-    }
-}
-
-main();
-</script>
-
-</body>
-</html>
