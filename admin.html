@@ -445,12 +445,18 @@ function renderTable(keyword = "") {
       const oldStatus = booking.status || "待確認";
 
       try {
+        console.log("➡ 更新狀態", { oldStatus, newStatus, booking });
         // 先更新訂單狀態
         await updateBookingStatus(booking, newStatus);
         booking.status = newStatus;
 
         // 狀態 → 房況（用 YYYY-MM-DD）
         const dateForRoom = formatDateOnly(booking.date);
+        console.log("➡ 觸發房況更新", {
+          house: booking.house,
+          dateForRoom,
+          newStatus
+        });
 
         // 已訂房 / 已入住 → 滿
         if (newStatus === "已訂房" || newStatus === "已入住") {
@@ -493,6 +499,7 @@ function renderTable(keyword = "") {
       const oldPay = booking.payment || "未收款";
 
       try {
+        console.log("➡ 更新收款狀態", { oldPay, newPay, booking });
         await updateBookingPayment(booking, newPay);
         booking.payment = newPay;
       } catch (e) {
@@ -564,6 +571,11 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   }
 
   try {
+    console.log("➡ 更新整筆訂單資料", {
+      old: editingBooking,
+      new: { newName, newPhone, newDate, newHouse, newDays, newAdult, newChild, newPet, newNote }
+    });
+
     await updateBookingFields(editingBooking, {
       name:  newName,
       phone: newPhone,
@@ -601,7 +613,7 @@ document.getElementById("editCancelBtn").addEventListener("click", closeEditModa
 /* 呼叫後端更新「整筆訂單內容」 */
 async function updateBookingFields(booking, newData) {
   const payload = {
-    action: "update",              // 對應 GAS 的 updateBooking
+    action: "update",
     admin_key: ADMIN_KEY,
     time: booking.time,           // 建立時間（key）
     phoneOriginal: booking.phone, // 原本手機（key）
@@ -617,12 +629,15 @@ async function updateBookingFields(booking, newData) {
     note:  newData.note
   };
 
+  console.log("POST /update", payload);
+
   const res = await fetch(API_URL, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
   const json = await res.json();
+  console.log("✅ update 回傳", json);
   if (!json.success) {
     throw new Error(json.error || "更新訂單資料失敗");
   }
@@ -640,12 +655,15 @@ async function updateBookingStatus(booking, newStatus) {
     status: newStatus
   };
 
+  console.log("POST /updateStatus", payload);
+
   const res = await fetch(API_URL, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
   const json = await res.json();
+  console.log("✅ updateStatus 回傳", json);
   if (!json.success) {
     throw new Error(json.error || "更新狀態失敗");
   }
@@ -657,11 +675,13 @@ async function updateBookingPayment(booking, newPayment) {
     action: "updatePayment",
     admin_key: ADMIN_KEY,
     uid:     booking.uid || "",
-    phone:   booking.phone || "",   // 後端目前仍保留手機當備用 key
+    phone:   booking.phone || "",
     house:   booking.house || "",
     date:    booking.date || "",
     payment: newPayment
   };
+
+  console.log("POST /updatePayment", payload);
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -669,17 +689,19 @@ async function updateBookingPayment(booking, newPayment) {
   });
 
   const json = await res.json();
+  console.log("✅ updatePayment 回傳", json);
   if (!json.success) {
     throw new Error(json.error || "更新收款狀態失敗");
   }
 }
 
-
 /* 更新房況管理表（讓 room-calendar.html 看到「滿」或空） */
 async function updateRoomFull(house, date, status) {
-  if (!house || !date) return;
+  if (!house || !date) {
+    console.warn("updateRoomFull 缺少資料", { house, date, status });
+    return;
+  }
 
-  // 一律轉成 YYYY-MM-DD，跟房況表格式一致
   const dateStr = formatDateOnly(date);
 
   const payload = {
@@ -687,39 +709,43 @@ async function updateRoomFull(house, date, status) {
     admin_key: ADMIN_KEY,
     house,
     date: dateStr,
-    status  // "滿" or ""
+    status  // "滿" 或 ""
   };
+
+  console.log("POST /updateRoomStatus", payload);
 
   const res = await fetch(API_URL, {
     method: "POST",
     body: JSON.stringify(payload)
   });
 
+  let json;
   try {
-    const json = await res.json();
-    if (!json.success) {
-      console.error("更新房況失敗", json);
-      return;
-    }
-
-    // ✅ 後端成功 → 重新整理 iframe 裡的房況日曆
-    const iframe = document.querySelector(".room-calendar-frame");
-    if (iframe && iframe.contentWindow) {
-      const win = iframe.contentWindow;
-      if (typeof win.loadCalendar === "function") {
-        // 強制重抓最新房況
-        win.loadCalendar(true);
-      } else {
-        // 保險作法：整個 iframe 重載
-        iframe.src = iframe.src;
-      }
-    }
+    json = await res.json();
   } catch (e) {
-    console.warn("房況 API 回傳非 JSON，略過解析", e);
+    console.error("解析房況 API 回傳失敗", e);
+    alert("更新房況失敗（回傳格式錯誤）");
+    return;
+  }
+
+  console.log("✅ updateRoomStatus 回傳", json);
+
+  if (!json.success) {
+    console.error("更新房況失敗", json);
+    alert("更新房況失敗：" + (json.error || "請稍後再試"));
+    return;
+  }
+
+  // ✅ 後端成功 → 直接重載 iframe，加上時間戳避免 cache
+  const iframe = document.querySelector(".room-calendar-frame");
+  if (iframe) {
+    const base = iframe.src.split("?")[0];
+    iframe.src = base + "?t=" + Date.now();
+    console.log("🔄 已重新載入房況日曆 iframe");
+  } else {
+    console.warn("找不到房況 iframe，無法重載");
   }
 }
-
-
 
 /* 搜尋按鈕 */
 document.getElementById("btnSearch").addEventListener("click", () => {
@@ -735,6 +761,7 @@ document.getElementById("btnClear").addEventListener("click", () => {
 /* 啟動 */
 loadBookings();
 </script>
+
 
 </body>
 </html>
