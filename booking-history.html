@@ -82,11 +82,11 @@
 </div>
 
 <script>
-// ★ GAS API（請確保後端支援用 uid 查詢）
+// ★ GAS API（後端已支援用 uid 查詢）
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-// ★ 你的 LIFF ID（沿用你目前專案的）
+// ★ 你的 LIFF ID
 const LIFF_ID = "2008409020-k4Oy7Y0D";
 
 /* 入口：初始化 LIFF 並查詢訂房紀錄 */
@@ -95,15 +95,15 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initLiffAndSearch() {
-  const statusEl = document.getElementById("status");
+  const statusEl  = document.getElementById("status");
   const resultBox = document.getElementById("resultBox");
 
   try {
     // 1. 初始化 LIFF
     await liff.init({ liffId: LIFF_ID });
 
-    // 2. 若尚未登入，要求登入（理論上從圖文選單點開會在 LINE 內）
-    if (!liff.isLoggedIn()) {
+    // 2. 如果不在 LINE 內，且尚未登入 → 走 LINE Login
+    if (!liff.isInClient() && !liff.isLoggedIn()) {
       liff.login({ redirectUri: window.location.href });
       return;
     }
@@ -139,12 +139,12 @@ async function initLiffAndSearch() {
       return;
     }
 
-    // 6. 有紀錄 → 顯示
+    // 6. 有紀錄 → 顯示（欄位對應 GAS：time / uid / email / name / phone / house / date / days / adult / child / pet / note）
     let html = "";
     data.forEach(d => {
       html += `
         <div class="record">
-          <div><b>訂單編號：</b>${d.id || ""}</div>
+          <div><b>建立時間：</b>${d.time || ""}</div>
           <div><b>姓名：</b>${d.name || ""}</div>
           <div><b>入住日：</b>${d.date || ""}</div>
           <div><b>天數：</b>${d.days || ""} 晚</div>
