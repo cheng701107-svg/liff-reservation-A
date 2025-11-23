@@ -6,159 +6,144 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-    body {
-        font-family: Arial, "Microsoft JhengHei";
-        background: #f2f2f2;
-        margin: 0;
-        padding: 0;
-    }
+  body {
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    margin: 0;
+    background: #f5f5f5;
+  }
 
-    header {
-        background: #06c755;
-        color: white;
-        padding: 16px;
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-    }
+  header {
+    background: #06c755;
+    color: #fff;
+    padding: 16px;
+    font-size: 24px;
+    font-weight: 900;
+    text-align: center;
+  }
 
-    .login-box {
-        margin: 60px auto;
-        width: 90%;
-        max-width: 380px;
-        background: #fff;
-        padding: 24px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        border-radius: 16px;
-        text-align: center;
-    }
+  .wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px;
+  }
 
-    .login-box input {
-        width: 100%;
-        padding: 16px;
-        font-size: 20px;
-        margin-top: 16px;
-        border-radius: 12px;
-        border: 1px solid #ccc;
-    }
+  h2 {
+    margin: 16px 0 8px;
+    font-size: 20px;
+  }
 
-    .login-box button {
-        width: 100%;
-        padding: 16px;
-        font-size: 20px;
-        background: #06c755;
-        border: none;
-        color: #fff;
-        border-radius: 12px;
-        margin-top: 20px;
-        cursor: pointer;
-    }
+  .section {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
 
-    /* 管理主頁 */
-    .container {
-        padding: 16px;
-        display: none;
-    }
+  /* 搜尋區塊 */
+  .search-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
-    .search-box input {
-        width: 100%;
-        padding: 14px;
-        font-size: 18px;
-        border-radius: 10px;
-        border: 1px solid #ccc;
-    }
+  .search-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
 
-    .table-wrapper {
-        margin-top: 20px;
-        overflow-x: auto;
-        background: white;
-        padding: 10px;
-        border-radius: 10px;
-    }
+  .btn {
+    padding: 10px 16px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
 
-    table {
-        width: 1400px;
-        border-collapse: collapse;
-        font-size: 16px;
-    }
+  .btn-primary {
+    background: #06c755;
+    color: #fff;
+  }
 
-    th {
-        background: #06c755;
-        color: white;
-        padding: 10px;
-    }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
 
+  .loading,
+  .error {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .loading {
+    color: #666;
+  }
+
+  .error {
+    color: #d32f2f;
+  }
+
+  /* 訂房清單 table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  thead {
+    background: #00b33c;
+    color: #fff;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+    font-size: 14px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+  }
+
+  th {
+    font-weight: 700;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .status-select {
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid #f0a0a0;
+    color: #d32f2f;
+    font-weight: 700;
+    background: #fff0f0;
+  }
+
+  /* 房況管理 iframe */
+  .room-calendar-frame {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    height: 560px; /* 若不夠高可再調整 */
+    background: #fff;
+  }
+
+  @media (max-width: 768px) {
+    th,
     td {
-        padding: 8px;
-        border-bottom: 1px solid #eee;
+      font-size: 13px;
+      padding: 8px 4px;
     }
-
-    .btn-edit, .btn-delete {
-        padding: 6px 12px;
-        border-radius: 8px;
-        color: #fff;
-        cursor: pointer;
-    }
-    .btn-edit { background: #007aff; }
-    .btn-delete { background: #ff3b30; }
-
-    /* Modal */
-    .modal {
-        display: none;
-        position: fixed;
-        left: 0; top: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.6);
-        justify-content: center;
-        align-items: center;
-    }
-
-    .modal-content {
-        width: 90%;
-        max-width: 420px;
-        background: #fff;
-        padding: 20px;
-        border-radius: 16px;
-    }
-
-    .modal-content input, .modal-content select, .modal-content textarea {
-        width: 100%;
-        margin-top: 12px;
-        padding: 12px;
-        border-radius: 10px;
-        border: 1px solid #ccc;
-    }
-
-    .modal-content button {
-        width: 100%;
-        margin-top: 18px;
-        padding: 14px;
-        background: #06c755;
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        font-size: 18px;
-        cursor: pointer;
-    }
-
-    .room-box {
-        margin-top: 20px;
-        background: white;
-        padding: 16px;
-        border-radius: 14px;
-    }
-
-    .room-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-    }
-
-    .room-row select {
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 10px;
-    }
-
+  }
 </style>
 </head>
 
@@ -166,297 +151,263 @@
 
 <header>靖寬靖廣 — 管理後台</header>
 
-<!-- 登入畫面 -->
-<div id="login" class="login-box">
-    <h2>請輸入管理密碼</h2>
-    <input type="password" id="adminKey" placeholder="管理密碼" />
-    <button onclick="login()">登入</button>
-    <p id="loginError" style="color:red; margin-top:10px;"></p>
-</div>
+<div class="wrapper">
 
-<!-- 主畫面 -->
-<div id="main" class="container">
-
+  <!-- 🔍 搜尋訂房資料 -->
+  <section class="section">
     <h2>🔍 搜尋訂房資料</h2>
-    <div class="search-box">
-        <input id="searchInput" placeholder="輸入姓名、手機、館別或日期" oninput="renderTable()" />
+    <div class="search-row">
+      <input
+        id="keyword"
+        type="text"
+        placeholder="輸入姓名、手機、館別或入住日期（YYYY-MM-DD）"
+      />
+      <button class="btn btn-primary" id="btnSearch">搜尋</button>
+      <button class="btn" id="btnClear">清除</button>
     </div>
+    <div id="bookingsStatus" class="loading">載入中…</div>
+  </section>
 
-    <h2 style="margin-top:30px;">📘 訂房清單</h2>
-
-    <div class="table-wrapper">
-        <table id="bookingTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>姓名</th>
-                    <th>手機</th>
-                    <th>入住日</th>
-                    <th>天數</th>
-                    <th>大人</th>
-                    <th>小孩</th>
-                    <th>寵物</th>
-                    <th>館別</th>
-                    <th>備註</th>
-                    <th>管理</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+  <!-- 📋 訂房清單 -->
+  <section class="section">
+    <h2>📋 訂房清單</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>手機</th>
+            <th>入住日</th>
+            <th>館別</th>
+            <th>天數</th>
+            <th>大人</th>
+            <th>小孩</th>
+            <th>寵物</th>
+            <th>備註</th>
+            <th>狀態</th>
+          </tr>
+        </thead>
+        <tbody id="bookingBody">
+          <!-- JS 動態產生 -->
+        </tbody>
+      </table>
     </div>
+  </section>
 
-    <h2 style="margin-top:40px;">🏡 房況管理</h2>
-    <div class="room-box" id="roomStatusBox">
-        <!-- 房況將自動載入 -->
-    </div>
-</div>
+  <!-- 🏡 房況管理（日曆） -->
+  <section class="section">
+    <h2>🏡 房況管理</h2>
+    <!-- 直接嵌入 room-calendar.html -->
+    <iframe
+      src="room-calendar.html"
+      class="room-calendar-frame"
+      title="房況管理日曆"
+    ></iframe>
+  </section>
 
-<!-- 編輯彈窗 -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-
-        <h3>編輯訂單</h3>
-
-        <input id="edit_id" type="hidden">
-
-        <label>姓名</label>
-        <input id="edit_name">
-
-        <label>手機</label>
-        <input id="edit_phone">
-
-        <label>入住日期</label>
-        <input id="edit_date" type="date">
-
-        <label>天數</label>
-        <input id="edit_days" type="number">
-
-        <label>大人</label>
-        <input id="edit_adult" type="number">
-
-        <label>小孩</label>
-        <input id="edit_child" type="number">
-
-        <label>寵物</label>
-        <select id="edit_pet">
-            <option value="無">無</option>
-            <option value="有">有</option>
-        </select>
-
-        <label>館別</label>
-        <select id="edit_house">
-            <option value="A館">A館</option>
-            <option value="B館">B館</option>
-        </select>
-
-        <label>備註</label>
-        <textarea id="edit_note"></textarea>
-
-        <button onclick="saveEdit()">儲存</button>
-        <button onclick="closeModal()" style="background:#999;">取消</button>
-
-    </div>
 </div>
 
 <script>
-/* ★★★★★ 請修改為你的 GAS API ★★★★★ */
-const API_URL = "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+const API_URL   =
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+const ADMIN_KEY = "admin2025";
 
-let ALL_BOOKINGS = [];
-let ADMIN_LOGGED = false;
+let allBookings = [];
 
-/* ------------------------------
-   登入
--------------------------------- */
-function login() {
-    const key = document.getElementById("adminKey").value;
-    if (key !== "admin2025") {
-        document.getElementById("loginError").innerText = "密碼錯誤";
-        return;
-    }
-
-    ADMIN_LOGGED = true;
-    document.getElementById("login").style.display = "none";
-    document.getElementById("main").style.display = "block";
-
-    loadAllBookings();
-    loadRoomStatus();
+/* 將時間字串轉成 YYYY-MM-DD */
+function formatDateOnly(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
 }
 
-/* ------------------------------
-   載入所有訂單
--------------------------------- */
-async function loadAllBookings() {
+/* 載入所有訂房資料（後端請實作 action: "getAll" 回傳陣列） */
+async function loadBookings() {
+  const statusEl = document.getElementById("bookingsStatus");
+  statusEl.textContent = "載入中…";
+
+  try {
     const res = await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-            action: "getAll",
-            admin_key: "admin2025"
-        })
+      method: "POST",
+      body: JSON.stringify({
+        action: "getAll",
+        admin_key: ADMIN_KEY
+      })
     });
 
-    ALL_BOOKINGS = await res.json();
+    const data = await res.json();
+    allBookings = Array.isArray(data) ? data : [];
+    statusEl.textContent = `共 ${allBookings.length} 筆訂房資料`;
+
     renderTable();
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "讀取訂房資料失敗，請稍後再試。";
+    statusEl.className = "error";
+  }
 }
 
-/* ------------------------------
-   渲染訂單表格
--------------------------------- */
-function renderTable() {
-    const q = document.getElementById("searchInput").value.trim();
-    const tbody = document.querySelector("#bookingTable tbody");
-    tbody.innerHTML = "";
+/* 依關鍵字過濾並畫出表格 */
+function renderTable(keyword = "") {
+  const tbody = document.getElementById("bookingBody");
+  tbody.innerHTML = "";
 
-    ALL_BOOKINGS.filter(b => {
-        return (
-            b.name.includes(q) ||
-            b.phone.includes(q) ||
-            b.house.includes(q) ||
-            b.date.includes(q)
-        );
-    })
-    .forEach(b => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${b.id}</td>
-            <td>${b.name}</td>
-            <td>${b.phone}</td>
-            <td>${b.date}</td>
-            <td>${b.days}</td>
-            <td>${b.adult}</td>
-            <td>${b.child}</td>
-            <td>${b.pet}</td>
-            <td>${b.house}</td>
-            <td>${b.note}</td>
-            <td>
-                <span class="btn-edit" onclick='openEdit(${JSON.stringify(b)})'>編輯</span>
-                <span class="btn-delete" onclick='deleteBooking("${b.id}")'>刪除</span>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
+  const kw = keyword.trim().toLowerCase();
 
-/* ------------------------------
-   刪除訂單
--------------------------------- */
-async function deleteBooking(id) {
-    if (!confirm("確定要刪除？")) return;
+  const filtered = allBookings.filter(b => {
+    if (!kw) return true;
+    const fields = [
+      b.name,
+      b.phone,
+      b.house,
+      b.date,
+      b.note,
+      b.status
+    ]
+      .filter(Boolean)
+      .map(x => String(x).toLowerCase());
+    return fields.some(x => x.includes(kw));
+  });
 
-    await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-            action: "delete",
-            id,
-            admin_key: "admin2025"
-        })
-    });
+  filtered.forEach(booking => {
+    const tr = document.createElement("tr");
 
-    alert("已刪除");
-    loadAllBookings();
-}
+    const dateText = formatDateOnly(booking.date);
 
-/* ------------------------------
-   編輯 — 打開 Modal
--------------------------------- */
-function openEdit(b) {
-    document.getElementById("edit_id").value = b.id;
-    document.getElementById("edit_name").value = b.name;
-    document.getElementById("edit_phone").value = b.phone;
-    document.getElementById("edit_date").value = b.date;
-    document.getElementById("edit_days").value = b.days;
-    document.getElementById("edit_adult").value = b.adult;
-    document.getElementById("edit_child").value = b.child;
-    document.getElementById("edit_pet").value = b.pet;
-    document.getElementById("edit_house").value = b.house;
-    document.getElementById("edit_note").value = b.note;
-
-    document.getElementById("editModal").style.display = "flex";
-}
-
-function closeModal() {
-    document.getElementById("editModal").style.display = "none";
-}
-
-/* ------------------------------
-   儲存編輯
--------------------------------- */
-async function saveEdit() {
-    const data = {
-        action: "update",
-        admin_key: "admin2025",
-        id: document.getElementById("edit_id").value,
-        name: document.getElementById("edit_name").value,
-        phone: document.getElementById("edit_phone").value,
-        date: document.getElementById("edit_date").value,
-        days: document.getElementById("edit_days").value,
-        adult: document.getElementById("edit_adult").value,
-        child: document.getElementById("edit_child").value,
-        pet: document.getElementById("edit_pet").value,
-        house: document.getElementById("edit_house").value,
-        note: document.getElementById("edit_note").value
-    };
-
-    await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify(data)
-    });
-
-    alert("已更新");
-    closeModal();
-    loadAllBookings();
-}
-
-/* ------------------------------
-   房況管理 — 載入
--------------------------------- */
-async function loadRoomStatus() {
-    const res = await fetch(API_URL + "?action=getRoomStatus");
-    const status = await res.json();
-
-    const box = document.getElementById("roomStatusBox");
-
-    box.innerHTML = `
-        <div class="room-row">
-            <div>A館</div>
-            <select onchange="updateRoom('A館', this.value)">
-                <option value="">可預訂</option>
-                <option value="滿" ${status["A館"].includes(today()) ? "selected" : ""}>已滿</option>
-            </select>
-        </div>
-
-        <div class="room-row">
-            <div>B館</div>
-            <select onchange="updateRoom('B館', this.value)">
-                <option value="">可預訂</option>
-                <option value="滿" ${status["B館"].includes(today()) ? "selected" : ""}>已滿</option>
-            </select>
-        </div>
+    tr.innerHTML = `
+      <td>${booking.name  || ""}</td>
+      <td>${booking.phone || ""}</td>
+      <td>${dateText      || ""}</td>
+      <td>${booking.house || ""}</td>
+      <td>${booking.days  || ""}</td>
+      <td>${booking.adult || ""}</td>
+      <td>${booking.child || ""}</td>
+      <td>${booking.pet   || ""}</td>
+      <td>${booking.note  || ""}</td>
     `;
-}
 
-function today() {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-}
+    // 狀態欄位（紅字下拉選單）
+    const tdStatus = document.createElement("td");
+    const select   = document.createElement("select");
+    select.className = "status-select";
 
-/* ------------------------------
-   更新房況
--------------------------------- */
-async function updateRoom(house, status) {
-    await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-            action: "updateRoomStatus",
-            admin_key: "admin2025",
-            house,
-            date: today(),
-            status
-        })
+    const statusOptions = ["待確認", "已訂房", "已入住", "已取消"];
+    statusOptions.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      select.appendChild(opt);
     });
 
-    alert(house + " 房況已更新！");
+    const currentStatus = booking.status || "待確認";
+    select.value = currentStatus;
+
+    // 監聽狀態變更
+    select.addEventListener("change", async () => {
+      const newStatus = select.value;
+      const oldStatus = booking.status || "待確認";
+
+      try {
+        // 1) 更新訂單本身狀態（後端請實作 action: "updateStatus" 或在 updateBooking 內處理）
+        await updateBookingStatus(booking, newStatus);
+
+        // 將本地資料更新
+        booking.status = newStatus;
+
+        // 2) 若是「已訂房」→ 房況日曆設為滿
+        //    若改為其他（例如已取消）→ 清空房況
+        if (newStatus === "已訂房") {
+          await updateRoomFull(booking.house, booking.date, "滿");
+        } else {
+          await updateRoomFull(booking.house, booking.date, "");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("更新狀態失敗，請稍後再試");
+        select.value = oldStatus; // 還原
+      }
+    });
+
+    tdStatus.appendChild(select);
+    tr.appendChild(tdStatus);
+
+    tbody.appendChild(tr);
+  });
 }
+
+/* 呼叫後端更新訂單狀態
+   👉 後端建議新增一個 action: "updateStatus"
+     - 依照 time + phone 或其他 key 找到該筆訂單
+     - 更新「狀態」欄位
+*/
+async function updateBookingStatus(booking, newStatus) {
+  // 這裡假設後端已支援 action: "updateStatus"
+  const payload = {
+    action: "updateStatus",
+    admin_key: ADMIN_KEY,
+    // 可以用時間 + 手機當 key（請與後端約定好）
+    time:  booking.time,
+    phone: booking.phone,
+    status: newStatus
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  const json = await res.json();
+  if (!json.success) {
+    throw new Error(json.error || "更新狀態失敗");
+  }
+}
+
+/* 更新房況管理表（讓 room-calendar.html 看到「滿」或空） */
+async function updateRoomFull(house, date, status) {
+  if (!house || !date) return;
+
+  const payload = {
+    action: "updateRoomStatus",
+    admin_key: ADMIN_KEY,
+    house,
+    date,
+    status  // "滿" or ""
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  // 這個 API 之前已實作，單純檢查成功與否即可
+  try {
+    const json = await res.json();
+    if (!json.success) {
+      console.error("更新房況失敗", json);
+    }
+  } catch (e) {
+    // 若後端未回 JSON，可忽略錯誤
+    console.warn("房況 API 回傳非 JSON，略過解析");
+  }
+}
+
+/* 綁定搜尋按鈕 */
+document.getElementById("btnSearch").addEventListener("click", () => {
+  const kw = document.getElementById("keyword").value;
+  renderTable(kw);
+});
+
+document.getElementById("btnClear").addEventListener("click", () => {
+  document.getElementById("keyword").value = "";
+  renderTable("");
+});
+
+/* 啟動 */
+loadBookings();
 </script>
 
 </body>
