@@ -277,11 +277,11 @@
   <!-- 🏡 房況管理（日曆） -->
   <section class="section">
     <h2>🏡 房況管理</h2>
-   <iframe
-  src="/room-calendar.html"
-  class="room-calendar-frame"
-  title="房況管理日曆"
-></iframe>
+    <iframe
+      src="/room-calendar.html"
+      class="room-calendar-frame"
+      title="房況管理日曆"
+    ></iframe>
   </section>
 
 </div>
@@ -346,6 +346,7 @@ const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 let editingBooking = null;   // 目前正在編輯的那筆（物件本身）
+let ROOM_CACHE = null;       // 房況快取 { "A館": [...], "B館": [...] }
 
 /* 將時間字串轉成 YYYY-MM-DD（給日期欄位 & 顯示用） */
 function formatDateOnly(value) {
@@ -356,6 +357,18 @@ function formatDateOnly(value) {
   const m  = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
+}
+
+/* 讀取房況（A館/B館哪些日期是滿房） */
+async function loadRoomStatus() {
+  try {
+    const res = await fetch(API_URL + "?action=getRoomStatus&ts=" + Date.now());
+    ROOM_CACHE = await res.json();
+    console.log("ROOM_CACHE =", ROOM_CACHE);
+  } catch (e) {
+    console.error("讀取房況失敗", e);
+    ROOM_CACHE = null;
+  }
 }
 
 /* 載入所有訂房資料（後端 action: "getAll" 回傳陣列） */
@@ -555,7 +568,7 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
 
   const newName   = document.getElementById("editName").value.trim();
   let   newPhone  = document.getElementById("editPhone").value.trim();
-  const newDate   = document.getElementById("editCheckin").value;
+  const newDate   = document.getElementById("editCheckin").value; // YYYY-MM-DD
   const newHouse  = document.getElementById("editHouse").value;
   const newDays   = document.getElementById("editDays").value;
   const newAdult  = document.getElementById("editAdult").value;
@@ -568,6 +581,22 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   if (!/^09\d{8}$/.test(newPhone)) {
     alert("手機格式錯誤，必須為 09 開頭 10 碼");
     return;
+  }
+
+  // ✅ 檢查新日期是否已經滿房
+  const newDateStr      = newDate; // already YYYY-MM-DD
+  const originalDateStr = formatDateOnly(editingBooking.date);
+  const houseForCheck   = newHouse;
+
+  if (ROOM_CACHE && ROOM_CACHE[houseForCheck]) {
+    const fullList = ROOM_CACHE[houseForCheck]; // 例如 ["2025-11-26", ...]
+    const isSameDateSameHouse =
+      originalDateStr === newDateStr && editingBooking.house === houseForCheck;
+
+    if (fullList.includes(newDateStr) && !isSameDateSameHouse) {
+      alert("此日期「" + houseForCheck + "」已滿房，請改選其他日期。");
+      return;
+    }
   }
 
   try {
@@ -726,6 +755,9 @@ async function updateRoomFull(house, date, status) {
       return;
     }
 
+    // 成功後重新抓一次房況快取
+    await loadRoomStatus();
+
     // ✅ 成功後請房況日曆重新「重抓 + 重畫」
     const iframe = document.querySelector(".room-calendar-frame");
     if (iframe && iframe.contentWindow) {
@@ -743,7 +775,6 @@ async function updateRoomFull(house, date, status) {
   }
 }
 
-
 /* 搜尋按鈕 */
 document.getElementById("btnSearch").addEventListener("click", () => {
   const kw = document.getElementById("keyword").value;
@@ -755,10 +786,10 @@ document.getElementById("btnClear").addEventListener("click", () => {
   renderTable("");
 });
 
-/* 啟動 */
+/* 啟動：載入訂單 & 房況 */
 loadBookings();
+loadRoomStatus();
 </script>
-
 
 </body>
 </html>
