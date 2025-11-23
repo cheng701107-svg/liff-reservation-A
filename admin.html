@@ -162,6 +162,78 @@
     background: #fff;
   }
 
+  /* ===== 編輯表單 Modal ===== */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;              /* 預設關閉 */
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+
+  .modal.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    max-width: 480px;
+    width: 90%;
+    box-sizing: border-box;
+  }
+
+  .modal-content h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+  }
+
+  .modal-row {
+    margin-bottom: 10px;
+    text-align: left;
+  }
+
+  .modal-row label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .modal-row input,
+  .modal-row textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+
+  .modal-row textarea {
+    resize: vertical;
+  }
+
+  .modal-actions {
+    margin-top: 12px;
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .btn-cancel {
+    background: #ccc;
+    color: #333;
+  }
+
+  .btn-save {
+    background: #06c755;
+    color: #fff;
+  }
+
   @media (max-width: 768px) {
     th,
     td {
@@ -234,12 +306,63 @@
 
 </div>
 
+<!-- ===== 編輯訂單 Modal ===== -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <h3>修改訂單</h3>
+    <form id="editForm">
+      <div class="modal-row">
+        <label for="editName">姓名</label>
+        <input type="text" id="editName" required>
+      </div>
+      <div class="modal-row">
+        <label for="editPhone">手機（10 碼）</label>
+        <input type="tel" id="editPhone" maxlength="10" required>
+      </div>
+      <div class="modal-row">
+        <label for="editDate">入住日（YYYY-MM-DD）</label>
+        <input type="date" id="editDate" required>
+      </div>
+      <div class="modal-row">
+        <label for="editHouse">館別（例：A館 / B館）</label>
+        <input type="text" id="editHouse" required>
+      </div>
+      <div class="modal-row">
+        <label for="editDays">天數（晚）</label>
+        <input type="number" id="editDays" min="1">
+      </div>
+      <div class="modal-row">
+        <label for="editAdult">大人人數</label>
+        <input type="number" id="editAdult" min="0">
+      </div>
+      <div class="modal-row">
+        <label for="editChild">小孩人數</label>
+        <input type="number" id="editChild" min="0">
+      </div>
+      <div class="modal-row">
+        <label for="editPet">寵物（無則填「無」）</label>
+        <input type="text" id="editPet">
+      </div>
+      <div class="modal-row">
+        <label for="editNote">備註</label>
+        <textarea id="editNote" rows="3"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-cancel" id="editCancel">取消</button>
+        <button type="submit" class="btn btn-save">儲存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const API_URL   =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
+let editingBooking = null;   // 正在編輯的那一筆（原始物件）
 
 /* 將時間字串轉成 YYYY-MM-DD */
 function formatDateOnly(value) {
@@ -414,51 +537,72 @@ function renderTable(keyword = "") {
   });
 }
 
-/* 小視窗修改一筆訂單 */
+/* 開啟 modal 並帶入資料 */
 function openEditDialog(booking) {
-  // 用 prompt 簡單實作逐欄修改（按取消就不變）
-  const newName  = prompt("姓名", booking.name || "") ;
-  if (newName === null) return;
+  editingBooking = booking;
 
-  const newPhone = prompt("手機（10 碼）", booking.phone || "");
-  if (newPhone === null) return;
+  document.getElementById("editName").value  = booking.name  || "";
+  document.getElementById("editPhone").value = (booking.phone || "").replace(/\D/g, "");
+  document.getElementById("editDate").value  = formatDateOnly(booking.date) || "";
+  document.getElementById("editHouse").value = booking.house || "";
+  document.getElementById("editDays").value  = booking.days  || "";
+  document.getElementById("editAdult").value = booking.adult || "";
+  document.getElementById("editChild").value = booking.child || "";
+  document.getElementById("editPet").value   = booking.pet   || "";
+  document.getElementById("editNote").value  = booking.note  || "";
 
-  const newDate  = prompt("入住日（YYYY-MM-DD）", formatDateOnly(booking.date) || "");
-  if (newDate === null) return;
+  document.getElementById("editModal").classList.add("active");
+}
 
-  const newHouse = prompt("館別（例如：A館 或 B館）", booking.house || "");
-  if (newHouse === null) return;
+/* 關閉 modal */
+function closeEditDialog() {
+  editingBooking = null;
+  document.getElementById("editForm").reset();
+  document.getElementById("editModal").classList.remove("active");
+}
 
-  const newDays  = prompt("天數（晚數）", booking.days || "");
-  if (newDays === null) return;
+/* 提交編輯表單 → 更新一筆訂單 */
+document.getElementById("editForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!editingBooking) return;
 
-  const newAdult = prompt("大人人數", booking.adult || "");
-  if (newAdult === null) return;
+  const name  = document.getElementById("editName").value.trim();
+  let phone   = document.getElementById("editPhone").value.trim();
+  const date  = document.getElementById("editDate").value.trim();
+  const house = document.getElementById("editHouse").value.trim();
+  const days  = document.getElementById("editDays").value.trim();
+  const adult = document.getElementById("editAdult").value.trim();
+  const child = document.getElementById("editChild").value.trim();
+  const pet   = document.getElementById("editPet").value.trim();
+  const note  = document.getElementById("editNote").value.trim();
 
-  const newChild = prompt("小孩人數", booking.child || "");
-  if (newChild === null) return;
-
-  const newPet   = prompt("寵物（例：1隻小狗，無則填無）", booking.pet || "");
-  if (newPet === null) return;
-
-  const newNote  = prompt("備註", booking.note || "");
-  if (newNote === null) return;
+  // 手機簡單驗證
+  phone = phone.replace(/\D/g, "");
+  if (!/^09\d{8}$/.test(phone)) {
+    alert("手機格式錯誤，必須為 09 開頭的 10 碼。");
+    return;
+  }
 
   const edited = {
-    ...booking,
-    name:  newName.trim(),
-    phone: newPhone.trim(),
-    date:  newDate.trim(),
-    house: newHouse.trim(),
-    days:  newDays.trim(),
-    adult: newAdult.trim(),
-    child: newChild.trim(),
-    pet:   newPet.trim(),
-    note:  newNote.trim()
+    ...editingBooking,
+    name,
+    phone,
+    date,
+    house,
+    days,
+    adult,
+    child,
+    pet,
+    note
   };
 
-  updateBookingDetail(booking, edited);
-}
+  await updateBookingDetail(editingBooking, edited);
+});
+
+/* 取消編輯 */
+document.getElementById("editCancel").addEventListener("click", () => {
+  closeEditDialog();
+});
 
 /* 呼叫後端更新「整筆訂單資料」（除了狀態 / 收款） */
 async function updateBookingDetail(original, edited) {
@@ -468,12 +612,12 @@ async function updateBookingDetail(original, edited) {
       admin_key: ADMIN_KEY,
       // 用時間 + 手機 當 key（對應 GAS 的 updateBooking）
       time:  original.time,
-      phone: original.phone,
+      phone: original.phone,      // 用舊手機當 key
       // 更新欄位（對應試算表 B ~ L 欄）
       uid:    original.uid   || "",
       email:  original.email || "",
       name:   edited.name    || "",
-      phoneNew: edited.phone || "", // 為避免混淆，下面會處理
+      phoneNew: edited.phone || "",
       house:  edited.house   || "",
       date:   edited.date    || "",
       days:   edited.days    || "",
@@ -508,7 +652,8 @@ async function updateBookingDetail(original, edited) {
     original.pet   = payload.pet;
     original.note  = payload.note;
 
-    // 重新渲染表格（保留搜尋關鍵字）
+    // 關閉 modal + 重新渲染表格（保留搜尋關鍵字）
+    closeEditDialog();
     const kw = document.getElementById("keyword").value;
     renderTable(kw);
 
