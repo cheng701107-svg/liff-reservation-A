@@ -633,7 +633,10 @@ async function updateBookingStatus(booking, newStatus) {
   const payload = {
     action: "updateStatus",
     admin_key: ADMIN_KEY,
-    time:  booking.time,
+    uid:    booking.uid || "",
+    phone:  booking.phone || "",
+    house:  booking.house || "",
+    date:   booking.date || "",
     status: newStatus
   };
 
@@ -653,7 +656,10 @@ async function updateBookingPayment(booking, newPayment) {
   const payload = {
     action: "updatePayment",
     admin_key: ADMIN_KEY,
-    time:  booking.time,
+    uid:     booking.uid || "",
+    phone:   booking.phone || "",   // 後端目前仍保留手機當備用 key
+    house:   booking.house || "",
+    date:    booking.date || "",
     payment: newPayment
   };
 
@@ -667,6 +673,7 @@ async function updateBookingPayment(booking, newPayment) {
     throw new Error(json.error || "更新收款狀態失敗");
   }
 }
+
 
 /* 更新房況管理表（讓房況日曆看到「滿」或空） */
 async function updateRoomFull(house, date, status) {
