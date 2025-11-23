@@ -79,7 +79,30 @@
   <h2>請填寫以下資料</h2>
 
   <form id="liffForm">
+    <!-- 隱藏：LINE UID / Email / Line 名稱 -->
     <input type="hidden" id="line_uid">
+    <input type="hidden" id="line_email">
+    <input type="hidden" id="line_name">
+
+     <!-- 姓名 -->
+    <div class="field-group">
+      <label>姓名（必填）</label>
+      <input type="text" id="name" required />
+    </div>
+
+    <!-- 手機 -->
+    <div class="field-group">
+      <label>手機號碼（必填）</label>
+      <input
+        type="tel"
+        id="phone"
+        required
+        placeholder="例如：0912345678"
+        pattern="09[0-9]{8}"
+        maxlength="10"
+        inputmode="numeric"
+      />
+    </div>
 
     <!-- 館別（自動帶入） -->
     <div class="field-group">
@@ -106,27 +129,7 @@
       </select>
     </div>
 
-    <!-- 姓名 -->
-    <div class="field-group">
-      <label>姓名（必填）</label>
-      <input type="text" id="name" required />
-    </div>
-
-    <!-- 手機 -->
-    <div class="field-group">
-      <label>手機號碼（必填）</label>
-      <input
-        type="tel"
-        id="phone"
-        required
-        placeholder="例如：0912345678"
-        pattern="09[0-9]{8}"
-        maxlength="10"
-        inputmode="numeric"
-      />
-    </div>
-
-    <!-- 大人 -->
+       <!-- 大人 -->
     <div class="field-group">
       <label>大人人數（必填）</label>
       <select id="adult" required>
@@ -203,15 +206,21 @@ async function init() {
   if (houseSelect) houseSelect.value = house;
   if (dateInput)   dateInput.value   = date;
 
-  // 6. 抓 LINE 使用者資料（UID + 可選：顯示名稱）
+  // 6. 抓 LINE 使用者資料（UID + 顯示名稱 + email）
   const profile = await liff.getProfile();
-  document.getElementById("line_uid").value = profile.userId;
+  document.getElementById("line_uid").value  = profile.userId;
+  document.getElementById("line_name").value = profile.displayName || "";
 
-  // 如果你想順便把 LINE 名稱帶到姓名欄位，也可以加這段：
+  // 自動帶入姓名欄位（如果尚未輸入）
   const nameInput = document.getElementById("name");
   if (nameInput && !nameInput.value) {
     nameInput.value = profile.displayName || "";
   }
+
+  // 取得 email（需在 LINE Developers 開啟 email scope）
+  const token = liff.getDecodedIDToken();
+  const email = token ? (token.email || "") : "";
+  document.getElementById("line_email").value = email;
 }
 
 // DOM 載完後執行初始化
@@ -243,12 +252,15 @@ document.getElementById("liffForm").addEventListener("submit", function(e) {
   params.append("child", document.getElementById("child").value);
   params.append("pet",   document.getElementById("pet").value);
   params.append("note",  document.getElementById("note").value);
-  params.append("uid",   document.getElementById("line_uid").value);
+
+  // ★ 新增：把 UID / Email / Line 名稱 一起帶到 resultSend
+  params.append("uid",      document.getElementById("line_uid").value);
+  params.append("email",    document.getElementById("line_email").value);
+  params.append("lineName", document.getElementById("line_name").value);
 
   window.location.href = "resultSend.html?" + params.toString();
 });
 </script>
-
 
 </body>
 </html>
