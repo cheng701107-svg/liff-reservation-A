@@ -139,6 +139,20 @@
     font-weight: 600;
   }
 
+  /* 管理欄「修改」按鈕 */
+  .btn-edit {
+    padding: 4px 8px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #999;
+    background: #ffffff;
+    cursor: pointer;
+  }
+
+  .btn-edit:hover {
+    background: #f0f0f0;
+  }
+
   /* 房況管理 iframe */
   .room-calendar-frame {
     width: 100%;
@@ -197,6 +211,7 @@
             <th>備註</th>
             <th>狀態</th>
             <th>收款</th>
+            <th>管理</th>
           </tr>
         </thead>
         <tbody id="bookingBody">
@@ -384,8 +399,125 @@ function renderTable(keyword = "") {
     tdPay.appendChild(paySel);
     tr.appendChild(tdPay);
 
+    /* ===== 管理欄：修改按鈕 ===== */
+    const tdManage = document.createElement("td");
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "修改";
+    editBtn.className = "btn-edit";
+    editBtn.addEventListener("click", () => {
+      openEditDialog(booking);
+    });
+    tdManage.appendChild(editBtn);
+    tr.appendChild(tdManage);
+
     tbody.appendChild(tr);
   });
+}
+
+/* 小視窗修改一筆訂單 */
+function openEditDialog(booking) {
+  // 用 prompt 簡單實作逐欄修改（按取消就不變）
+  const newName  = prompt("姓名", booking.name || "") ;
+  if (newName === null) return;
+
+  const newPhone = prompt("手機（10 碼）", booking.phone || "");
+  if (newPhone === null) return;
+
+  const newDate  = prompt("入住日（YYYY-MM-DD）", formatDateOnly(booking.date) || "");
+  if (newDate === null) return;
+
+  const newHouse = prompt("館別（例如：A館 或 B館）", booking.house || "");
+  if (newHouse === null) return;
+
+  const newDays  = prompt("天數（晚數）", booking.days || "");
+  if (newDays === null) return;
+
+  const newAdult = prompt("大人人數", booking.adult || "");
+  if (newAdult === null) return;
+
+  const newChild = prompt("小孩人數", booking.child || "");
+  if (newChild === null) return;
+
+  const newPet   = prompt("寵物（例：1隻小狗，無則填無）", booking.pet || "");
+  if (newPet === null) return;
+
+  const newNote  = prompt("備註", booking.note || "");
+  if (newNote === null) return;
+
+  const edited = {
+    ...booking,
+    name:  newName.trim(),
+    phone: newPhone.trim(),
+    date:  newDate.trim(),
+    house: newHouse.trim(),
+    days:  newDays.trim(),
+    adult: newAdult.trim(),
+    child: newChild.trim(),
+    pet:   newPet.trim(),
+    note:  newNote.trim()
+  };
+
+  updateBookingDetail(booking, edited);
+}
+
+/* 呼叫後端更新「整筆訂單資料」（除了狀態 / 收款） */
+async function updateBookingDetail(original, edited) {
+  try {
+    const payload = {
+      action: "update",
+      admin_key: ADMIN_KEY,
+      // 用時間 + 手機 當 key（對應 GAS 的 updateBooking）
+      time:  original.time,
+      phone: original.phone,
+      // 更新欄位（對應試算表 B ~ L 欄）
+      uid:    original.uid   || "",
+      email:  original.email || "",
+      name:   edited.name    || "",
+      phoneNew: edited.phone || "", // 為避免混淆，下面會處理
+      house:  edited.house   || "",
+      date:   edited.date    || "",
+      days:   edited.days    || "",
+      adult:  edited.adult   || "",
+      child:  edited.child   || "",
+      pet:    edited.pet     || "",
+      note:   edited.note    || ""
+    };
+
+    // 後端是用 data.phone 來寫入，這裡把 phoneNew 填到 phone
+    payload.phone = payload.phoneNew;
+    delete payload.phoneNew;
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error || "更新訂單失敗");
+    }
+
+    // 前端同步更新原本的 booking 物件
+    original.name  = payload.name;
+    original.phone = payload.phone;
+    original.house = payload.house;
+    original.date  = payload.date;
+    original.days  = payload.days;
+    original.adult = payload.adult;
+    original.child = payload.child;
+    original.pet   = payload.pet;
+    original.note  = payload.note;
+
+    // 重新渲染表格（保留搜尋關鍵字）
+    const kw = document.getElementById("keyword").value;
+    renderTable(kw);
+
+    alert("已更新訂單資料");
+
+  } catch (e) {
+    console.error(e);
+    alert("更新訂單資料失敗，請稍後再試");
+  }
 }
 
 /* 呼叫後端更新「狀態」 */
