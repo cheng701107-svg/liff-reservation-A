@@ -40,20 +40,41 @@
 
     .result-box {
         margin-top: 10px;
-        background: white;
-        padding: 18px;
+        padding: 0;
         border-radius: 12px;
         display: none;
     }
 
     .record {
-        padding: 14px 0;
-        border-bottom: 1px solid #eee;
+        padding: 14px 16px;
         font-size: 16px;
+        background: #ffffff;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
     .record:last-child {
-        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .record-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .record-table th {
+        text-align: left;
+        padding: 4px 6px;
+        width: 90px;          /* 左欄寬度 */
+        white-space: nowrap;
+        vertical-align: top;
+        font-weight: 700;
+    }
+
+    .record-table td {
+        padding: 4px 6px;
+        word-break: break-all;
     }
 
     .none {
@@ -88,6 +109,22 @@ const API_URL =
 
 // ★ 你的 LIFF ID
 const LIFF_ID = "2008409020-Way8kzM7";
+
+/* 將時間字串轉成「YYYY-MM-DD HH:mm」 */
+function formatDateTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) {
+    // 解析失敗就直接顯示原始字串，避免空白
+    return String(value);
+  }
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${dd} ${hh}:${mm}`;
+}
 
 /* 入口：初始化 LIFF 並查詢訂房紀錄 */
 document.addEventListener("DOMContentLoaded", () => {
@@ -151,18 +188,55 @@ async function initLiffAndSearch() {
     // 6. 有紀錄 → 顯示（欄位對應 GAS：time / uid / email / name / phone / house / date / days / adult / child / pet / note）
     let html = "";
     data.forEach(d => {
+      const createdText = formatDateTime(d.time); // 建立時間
+      const checkinText = formatDateTime(d.date); // 入住日
+
       html += `
         <div class="record">
-          <div><b>建立時間：</b>${d.time || ""}</div>
-          <div><b>姓名：</b>${d.name || ""}</div>
-          <div><b>入住日：</b>${d.date || ""}</div>
-          <div><b>天數：</b>${d.days || ""} 晚</div>
-          <div><b>大人：</b>${d.adult || ""}</div>
-          <div><b>小孩：</b>${d.child || ""}</div>
-          <div><b>寵物：</b>${d.pet || "（無）"}</div>
-          <div><b>館別：</b>${d.house || ""}</div>
-          <div><b>手機：</b>${d.phone || ""}</div>
-          <div><b>備註：</b>${d.note || "（無）"}</div>
+          <table class="record-table">
+            <tbody>
+              <tr>
+                <th>建立時間</th>
+                <td>${createdText}</td>
+              </tr>
+              <tr>
+                <th>姓名</th>
+                <td>${d.name || ""}</td>
+              </tr>
+              <tr>
+                <th>手機</th>
+                <td>${d.phone || ""}</td>
+              </tr>
+              <tr>
+                <th>入住日</th>
+                <td>${checkinText}</td>
+              </tr>
+              <tr>
+                <th>天數</th>
+                <td>${d.days || ""} 晚</td>
+              </tr>
+              <tr>
+                <th>大人</th>
+                <td>${d.adult || ""}</td>
+              </tr>
+              <tr>
+                <th>小孩</th>
+                <td>${d.child || ""}</td>
+              </tr>
+              <tr>
+                <th>寵物</th>
+                <td>${d.pet || "（無）"}</td>
+              </tr>
+              <tr>
+                <th>館別</th>
+                <td>${d.house || ""}</td>
+              </tr>
+              <tr>
+                <th>備註</th>
+                <td>${d.note || "（無）"}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       `;
     });
@@ -182,4 +256,3 @@ async function initLiffAndSearch() {
 
 </body>
 </html>
-
