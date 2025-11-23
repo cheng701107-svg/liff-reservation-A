@@ -102,16 +102,25 @@ async function initLiffAndSearch() {
     // 1. 初始化 LIFF
     await liff.init({ liffId: LIFF_ID });
 
-    // 2. 如果不在 LINE 內，且尚未登入 → 走 LINE Login
-    if (!liff.isInClient() && !liff.isLoggedIn()) {
-      liff.login({ redirectUri: window.location.href });
+    // 2. 如果不在 LINE App 內，就不要嘗試登入，直接提示
+    if (!liff.isInClient()) {
+      statusEl.textContent = "請從 LINE 官方帳號的圖文選單開啟本頁面。";
+      statusEl.className = "error";
       return;
     }
 
-    // 3. 取得使用者 profile → userId
-    const profile = await liff.getProfile();
-    const uid = profile.userId;
+    // 3. 在 LINE 內 → 直接取得使用者 profile → userId
+    let profile;
+    try {
+      profile = await liff.getProfile();
+    } catch (e) {
+      console.error("getProfile 失敗：", e);
+      statusEl.textContent = "無法取得使用者資料，請稍後再試。";
+      statusEl.className = "error";
+      return;
+    }
 
+    const uid = profile.userId;
     console.log("UID from LIFF:", uid);
 
     if (!uid) {
