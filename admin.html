@@ -347,23 +347,42 @@ const ADMIN_KEY = "admin2025";
 let allBookings = [];
 let editingBooking = null;   // 目前正在編輯的那筆（物件本身）
 
-/* 將時間字串轉成 YYYY-MM-DD（給日期欄位 & 顯示用） */
+/* helper：把日期字串統一成 YYYY-MM-DD（去掉時間、空白） */
+function normalizeDateString(v) {
+  if (!v) return "";
+  let s = typeof v === "string" ? v : String(v);
+  if (s.includes("T")) s = s.split("T")[0];
+  return s.trim();
+}
+
+/* 將時間字串轉成 YYYY-MM-DD（給畫面顯示 & date input 用） */
 function formatDateOnly(value) {
   if (!value) return "";
+  // 如果原本就是 YYYY-MM-DD，就直接 normalize
+  const asString = normalizeDateString(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(asString)) return asString;
+
   const d = new Date(value);
-  if (isNaN(d.getTime())) return String(value);
+  if (isNaN(d.getTime())) return asString;
   const y  = d.getFullYear();
   const m  = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
 
-/* 從 GAS 取得房況（哪些日子已滿房） */
+/* 從 GAS 取得房況（哪些日子已滿房）並做正規化 */
 async function fetchRoomStatus() {
   const res = await fetch(API_URL + "?action=getRoomStatus&ts=" + Date.now());
-  const json = await res.json();
-  // 預期格式：{ "A館": ["2025-11-26", ...], "B館": [...] }
-  return json || {};
+  const raw = await res.json();
+  const result = {};
+
+  if (raw && typeof raw === "object") {
+    Object.keys(raw).forEach(house => {
+      const list = Array.isArray(raw[house]) ? raw[house] : [];
+      result[house] = list.map(normalizeDateString);
+    });
+  }
+  return result;   // 例如：{ "A館": ["2025-11-26", ...] }
 }
 
 /* 載入所有訂房資料 */
@@ -453,19 +472,15 @@ function renderTable(keyword = "") {
       const oldStatus = booking.status || "待確認";
 
       try {
-        // 先更新訂單狀態
         await updateBookingStatus(booking, newStatus);
         booking.status = newStatus;
 
-        // 狀態 → 房況（用 YYYY-MM-DD）
         const dateForRoom = formatDateOnly(booking.date);
 
-        // 已訂房 / 已入住 → 滿
         if (newStatus === "已訂房" || newStatus === "已入住") {
           await updateRoomFull(booking.house, dateForRoom, "滿");
         }
 
-        // 待確認 / 已取消 → 清空（恢復空房）
         if (newStatus === "待確認" || newStatus === "已取消") {
           await updateRoomFull(booking.house, dateForRoom, "");
         }
@@ -473,7 +488,7 @@ function renderTable(keyword = "") {
       } catch (e) {
         console.error(e);
         alert("更新狀態失敗，請稍後再試");
-        statusSel.value = oldStatus; // 還原選單
+        statusSel.value = oldStatus;
       }
     });
 
@@ -549,7 +564,7 @@ function closeEditModal() {
   document.getElementById("editModal").style.display = "none";
 }
 
-/* 儲存修改（包含檢查是否選到滿房日期） */
+/* 儲存修改（含：檢查是否選到已滿房日期） */
 document.getElementById("editForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!editingBooking) return;
@@ -571,18 +586,18 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  // 先抓最新房況
+  // ✅ 儲存前，檢查新的日期 / 館別是否已滿房
   try {
     const roomStatus = await fetchRoomStatus();
-    const fullList   = (roomStatus[newHouse] || []).map(String); // 已滿日期陣列
-    const newDateStr = newDate;  // 已是 YYYY-MM-DD
-    const oldDateStr = formatDateOnly(editingBooking.date);
+    const fullList   = roomStatus[newHouse] || [];
+    const newDateStr = normalizeDateString(newDate);
+    const oldDateStr = normalizeDateString(formatDateOnly(editingBooking.date));
     const oldHouse   = editingBooking.house;
 
     const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
 
     if (fullList.includes(newDateStr) && !isSameAsOriginal) {
-      alert("此日期「" + newHouse + "」已滿房，請改選其他日期。");
+      alert(`「${newHouse}」在 ${newDateStr} 已滿房，請改選其他日期。`);
       return;
     }
   } catch (err) {
@@ -734,7 +749,6 @@ async function updateRoomFull(house, date, status) {
       if (typeof iframe.contentWindow.loadCalendar === "function") {
         iframe.contentWindow.loadCalendar(true); // 強制重抓
       } else {
-        // fallback：重新設定 src
         const baseSrc = iframe.src.split("#")[0].split("?")[0];
         iframe.src = baseSrc + "?t=" + Date.now();
       }
