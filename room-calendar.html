@@ -135,15 +135,16 @@ let CACHE = null;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-/** 抓房況資料 */
+// 初始化：抓房況
 async function initRoomData() {
-  const res = await fetch(API + "?action=getRoomStatus");
+  // 加上 ts 避免快取
+  const res = await fetch(API + "?action=getRoomStatus&ts=" + Date.now());
   CACHE = await res.json();
 }
 
-/** 產生日曆 */
+// 業主版 calendar
 function generateCalendar() {
-  if (!CACHE) return; // 還沒載到就先不畫
+  if (!CACHE) return; // 保險一下
 
   const house = document.getElementById("house").value;
   const fullDates = CACHE[house] || [];
@@ -205,12 +206,11 @@ function generateCalendar() {
     div.classList.add("free");
     div.textContent = d;
     div.onclick = () => updateRoom(dateStr, house, "滿");
-
     cal.appendChild(div);
   }
 }
 
-/** 寫入 GAS（更新單一日期房況） */
+// ★ 寫入 GAS 的 function
 async function updateRoom(dateStr, house, status) {
   const body = {
     action: "updateRoomStatus",
@@ -229,6 +229,7 @@ async function updateRoom(dateStr, house, status) {
 
   if (json.success) {
     // 更新快取
+    if (!CACHE[house]) CACHE[house] = [];
     if (status === "滿") {
       if (!CACHE[house].includes(dateStr)) {
         CACHE[house].push(dateStr);
@@ -236,24 +237,27 @@ async function updateRoom(dateStr, house, status) {
     } else {
       CACHE[house] = CACHE[house].filter(x => x !== dateStr);
     }
-
     generateCalendar();
   } else {
     alert("更新失敗：" + json.error);
   }
 }
 
-/** 給外部呼叫：載入 / 重新載入日曆
- *  force = true 時，一定重抓 GAS 最新房況
- */
-async function loadCalendar(force = false) {
-  if (!CACHE || force) {
+/* ✅ 提供給外部（admin.html）的刷新函式：
+   - 預設 forceRefresh=false（內部自己點日曆只重畫）
+   - admin.html 呼叫 loadCalendar(true) 會強制重抓 Google Sheet
+*/
+async function loadCalendar(forceRefresh = false) {
+  if (!CACHE || forceRefresh) {
     await initRoomData();
   }
   generateCalendar();
 }
 
-// 上 / 下個月
+// 讓父頁 iframe.contentWindow.loadCalendar 可以用
+window.loadCalendar = loadCalendar;
+
+// 上/下個月
 document.getElementById("prev").onclick = () => {
   currentMonth--;
   if (currentMonth < 0) {
@@ -272,10 +276,9 @@ document.getElementById("next").onclick = () => {
   generateCalendar();
 };
 
-// 換館別
 document.getElementById("house").addEventListener("change", generateCalendar);
 
-// 啟動：第一次強制抓一次資料
+// 啟動：第一次載入
 loadCalendar(true);
 </script>
 
