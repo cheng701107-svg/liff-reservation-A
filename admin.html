@@ -675,15 +675,18 @@ async function updateBookingPayment(booking, newPayment) {
 }
 
 
-/* 更新房況管理表（讓房況日曆看到「滿」或空） */
+/* 更新房況管理表（讓 room-calendar.html 看到「滿」或空） */
 async function updateRoomFull(house, date, status) {
   if (!house || !date) return;
+
+  // 一律轉成 YYYY-MM-DD，跟房況表格式一致
+  const dateStr = formatDateOnly(date);
 
   const payload = {
     action: "updateRoomStatus",
     admin_key: ADMIN_KEY,
     house,
-    date,
+    date: dateStr,
     status  // "滿" or ""
   };
 
@@ -696,11 +699,25 @@ async function updateRoomFull(house, date, status) {
     const json = await res.json();
     if (!json.success) {
       console.error("更新房況失敗", json);
+      return;
+    }
+
+    // ✅ 後端成功 → 重新整理 iframe 裡的房況日曆
+    const iframe = document.querySelector(".room-calendar-frame");
+    if (iframe && iframe.contentWindow) {
+      // 若 room-calendar.html 有暴露 loadCalendar，就直接叫它重新抓
+      if (typeof iframe.contentWindow.loadCalendar === "function") {
+        iframe.contentWindow.loadCalendar();
+      } else {
+        // 萬一拿不到 function，就用重新載入 iframe 的方式
+        iframe.src = iframe.src;
+      }
     }
   } catch (e) {
-    console.warn("房況 API 回傳非 JSON，略過解析");
+    console.warn("房況 API 回傳非 JSON，略過解析", e);
   }
 }
+
 
 /* 搜尋按鈕 */
 document.getElementById("btnSearch").addEventListener("click", () => {
