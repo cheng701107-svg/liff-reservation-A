@@ -135,16 +135,18 @@ let CACHE = null;
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-// 初始化：只抓一次房況
+/** 抓房況資料 */
 async function initRoomData() {
   const res = await fetch(API + "?action=getRoomStatus");
   CACHE = await res.json();
 }
 
-// 業主版 calendar
+/** 產生日曆 */
 function generateCalendar() {
+  if (!CACHE) return; // 還沒載到就先不畫
+
   const house = document.getElementById("house").value;
-  const fullDates = CACHE[house];
+  const fullDates = CACHE[house] || [];
 
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
@@ -194,7 +196,6 @@ function generateCalendar() {
     if (fullDates.includes(dateStr)) {
       div.classList.add("full");
       div.textContent = "滿";
-
       div.onclick = () => updateRoom(dateStr, house, "");
       cal.appendChild(div);
       continue;
@@ -203,14 +204,13 @@ function generateCalendar() {
     // 可預訂
     div.classList.add("free");
     div.textContent = d;
-
     div.onclick = () => updateRoom(dateStr, house, "滿");
 
     cal.appendChild(div);
   }
 }
 
-// ★ 寫入 GAS 的 function
+/** 寫入 GAS（更新單一日期房況） */
 async function updateRoom(dateStr, house, status) {
   const body = {
     action: "updateRoomStatus",
@@ -243,11 +243,17 @@ async function updateRoom(dateStr, house, status) {
   }
 }
 
-async function loadCalendar() {
-  if (!CACHE) await initRoomData();
+/** 給外部呼叫：載入 / 重新載入日曆
+ *  force = true 時，一定重抓 GAS 最新房況
+ */
+async function loadCalendar(force = false) {
+  if (!CACHE || force) {
+    await initRoomData();
+  }
   generateCalendar();
 }
 
+// 上 / 下個月
 document.getElementById("prev").onclick = () => {
   currentMonth--;
   if (currentMonth < 0) {
@@ -266,10 +272,11 @@ document.getElementById("next").onclick = () => {
   generateCalendar();
 };
 
+// 換館別
 document.getElementById("house").addEventListener("change", generateCalendar);
 
-// 啟動
-loadCalendar();
+// 啟動：第一次強制抓一次資料
+loadCalendar(true);
 </script>
 
 </body>
