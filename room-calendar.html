@@ -83,6 +83,15 @@
   .today {
     border: 3px solid #06c755 !important;
   }
+
+  /* 🔒 今天以前：灰色、不能點 */
+  .disabled {
+    background: #e5e5e5 !important;
+    color: #999 !important;
+    border: 1px solid #ccc !important;
+    pointer-events: none;
+    opacity: 0.7;
+  }
 </style>
 </head>
 
@@ -165,6 +174,15 @@ function generateCalendar() {
     cellDate.setHours(0, 0, 0, 0);
 
     const dow = cellDate.getDay();
+
+    // 🔒 今天以前 → 灰色＋不能點
+    if (cellDate < today) {
+      div.classList.add("disabled");
+      div.textContent = d;
+      cal.appendChild(div);
+      continue;
+    }
+
     if (dow === 0 || dow === 6) div.classList.add("weekend");
 
     // 今日框起來
@@ -192,7 +210,7 @@ function generateCalendar() {
   }
 }
 
-// ★ 修正後真正能寫入 GAS 的 function
+// ★ 寫入 GAS 的 function
 async function updateRoom(dateStr, house, status) {
   const body = {
     action: "updateRoomStatus",
@@ -212,7 +230,9 @@ async function updateRoom(dateStr, house, status) {
   if (json.success) {
     // 更新快取
     if (status === "滿") {
-      CACHE[house].push(dateStr);
+      if (!CACHE[house].includes(dateStr)) {
+        CACHE[house].push(dateStr);
+      }
     } else {
       CACHE[house] = CACHE[house].filter(x => x !== dateStr);
     }
