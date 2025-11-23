@@ -130,24 +130,22 @@
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-let CACHE = null;
+let CACHE = null; // { "A館": [...], "B館": [...] }
 
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 
-// 初始化：抓房況
-async function initRoomData() {
-  // 加上 ts 避免快取
+/* 從 GAS 抓房況 */
+async function initRoomData(force = false) {
+  if (!force && CACHE) return;
   const res = await fetch(API + "?action=getRoomStatus&ts=" + Date.now());
   CACHE = await res.json();
 }
 
-// 業主版 calendar
+/* 產生日曆 */
 function generateCalendar() {
-  if (!CACHE) return; // 保險一下
-
   const house = document.getElementById("house").value;
-  const fullDates = CACHE[house] || [];
+  const fullDates = (CACHE && CACHE[house]) ? CACHE[house] : [];
 
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
@@ -156,7 +154,7 @@ function generateCalendar() {
     `${currentYear} 年 ${currentMonth + 1} 月`;
 
   const first = new Date(currentYear, currentMonth, 1).getDay();
-  const days = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const days  = new Date(currentYear, currentMonth + 1, 0).getDate();
 
   // 補空白
   for (let i = 0; i < first; i++) {
@@ -228,57 +226,46 @@ async function updateRoom(dateStr, house, status) {
   const json = await res.json();
 
   if (json.success) {
-    // 更新快取
-    if (!CACHE[house]) CACHE[house] = [];
-    if (status === "滿") {
-      if (!CACHE[house].includes(dateStr)) {
-        CACHE[house].push(dateStr);
-      }
-    } else {
-      CACHE[house] = CACHE[house].filter(x => x !== dateStr);
-    }
+    // 成功後強制重新抓一次房況
+    await initRoomData(true);
     generateCalendar();
   } else {
     alert("更新失敗：" + json.error);
   }
 }
 
-/* ✅ 提供給外部（admin.html）的刷新函式：
-   - 預設 forceRefresh=false（內部自己點日曆只重畫）
-   - admin.html 呼叫 loadCalendar(true) 會強制重抓 Google Sheet
-*/
-async function loadCalendar(forceRefresh = false) {
-  if (!CACHE || forceRefresh) {
-    await initRoomData();
-  }
+/* 提供給外部（admin.html）呼叫：force=true 時會重抓 GAS */
+async function loadCalendar(force = false) {
+  await initRoomData(force);
   generateCalendar();
 }
 
-// 讓父頁 iframe.contentWindow.loadCalendar 可以用
+// 讓 parent iframe 可以呼叫
 window.loadCalendar = loadCalendar;
 
-// 上/下個月
-document.getElementById("prev").onclick = () => {
+document.getElementById("prev").onclick = async () => {
   currentMonth--;
   if (currentMonth < 0) {
     currentMonth = 11;
     currentYear--;
   }
-  generateCalendar();
+  await loadCalendar(false);
 };
 
-document.getElementById("next").onclick = () => {
+document.getElementById("next").onclick = async () => {
   currentMonth++;
   if (currentMonth > 11) {
     currentMonth = 0;
     currentYear++;
   }
-  generateCalendar();
+  await loadCalendar(false);
 };
 
-document.getElementById("house").addEventListener("change", generateCalendar);
+document.getElementById("house").addEventListener("change", () => {
+  generateCalendar();
+});
 
-// 啟動：第一次載入
+// 啟動
 loadCalendar(true);
 </script>
 
