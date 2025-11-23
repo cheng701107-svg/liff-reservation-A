@@ -328,10 +328,11 @@ function renderTable(keyword = "") {
         booking.status = newStatus;
 
         // 狀態 → 房況
+        const dateForRoom = formatDateOnly(booking.date); // ★ 確保是 YYYY-MM-DD
         if (newStatus === "已訂房") {
-          await updateRoomFull(booking.house, booking.date, "滿");
+          await updateRoomFull(booking.house, dateForRoom, "滿");
         } else {
-          await updateRoomFull(booking.house, booking.date, "");
+          await updateRoomFull(booking.house, dateForRoom, "");
         }
       } catch (e) {
         console.error(e);
@@ -380,10 +381,7 @@ function renderTable(keyword = "") {
   });
 }
 
-/* 呼叫後端更新「狀態」
-   👉 後端建議新增 action: "updateStatus"
-   用 time + phone 或你定義的 key 找到那筆訂單
-*/
+/* 呼叫後端更新「狀態」 */
 async function updateBookingStatus(booking, newStatus) {
   const payload = {
     action: "updateStatus",
@@ -404,10 +402,7 @@ async function updateBookingStatus(booking, newStatus) {
   }
 }
 
-/* 呼叫後端更新「收款」狀態
-   👉 後端建議新增 action: "updatePayment"
-   同樣用 time + phone 當 key
-*/
+/* 呼叫後端更新「收款」狀態 */
 async function updateBookingPayment(booking, newPayment) {
   const payload = {
     action: "updatePayment",
@@ -432,11 +427,14 @@ async function updateBookingPayment(booking, newPayment) {
 async function updateRoomFull(house, date, status) {
   if (!house || !date) return;
 
+  // ★ 一律轉成 YYYY-MM-DD，跟房況表格式一致
+  const dateStr = formatDateOnly(date);
+
   const payload = {
     action: "updateRoomStatus",
     admin_key: ADMIN_KEY,
     house,
-    date,
+    date: dateStr,
     status  // "滿" or ""
   };
 
