@@ -130,14 +130,16 @@
   }
 
   /* 收款選單（一般色） */
-  .payment-select {
-    padding: 4px 6px;
-    border-radius: 6px;
-    border: 1px solid #999;
-    color: #333;
-    background: #ffffff;
-    font-weight: 600;
-  }
+/* 收款選單（藍字） */
+.payment-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #999;
+  color: #1976d2;       /* 🔵 改成藍色字 */
+  background: #ffffff;
+  font-weight: 600;
+}
+
 
   /* 房況管理 iframe */
   .room-calendar-frame {
@@ -319,30 +321,35 @@ function renderTable(keyword = "") {
     const currentStatus = booking.status || "待確認";
     statusSel.value = currentStatus;
 
-    statusSel.addEventListener("change", async () => {
-      const newStatus = statusSel.value;
-      const oldStatus = booking.status || "待確認";
+   statusSel.addEventListener("change", async () => {
+  const newStatus = statusSel.value;
+  const oldStatus = booking.status || "待確認";
 
-      try {
-        await updateBookingStatus(booking, newStatus);
-        booking.status = newStatus;
+  try {
+    // 先更新訂單的狀態欄位
+    await updateBookingStatus(booking, newStatus);
+    booking.status = newStatus;
 
-        // 狀態 → 房況
-        const dateForRoom = formatDateOnly(booking.date); // ★ 確保是 YYYY-MM-DD
-        if (newStatus === "已訂房") {
-          await updateRoomFull(booking.house, dateForRoom, "滿");
-        } else {
-          await updateRoomFull(booking.house, dateForRoom, "");
-        }
-      } catch (e) {
-        console.error(e);
-        alert("更新狀態失敗，請稍後再試");
-        statusSel.value = oldStatus;
-      }
-    });
+    // 狀態 → 房況
+    const dateForRoom = formatDateOnly(booking.date); // 確保是 YYYY-MM-DD
 
-    tdStatus.appendChild(statusSel);
-    tr.appendChild(tdStatus);
+    // 已訂房 / 已入住 = 滿房
+    if (newStatus === "已訂房" || newStatus === "已入住") {
+      await updateRoomFull(booking.house, dateForRoom, "滿");
+    }
+
+    // 待確認 / 已取消 = 清空（視為可預訂）
+    if (newStatus === "待確認" || newStatus === "已取消") {
+      await updateRoomFull(booking.house, dateForRoom, "");
+    }
+
+  } catch (e) {
+    console.error(e);
+    alert("更新狀態失敗，請稍後再試");
+    statusSel.value = oldStatus; // 還原下拉
+  }
+});
+
 
     /* ===== 收款欄位 ===== */
     const tdPay = document.createElement("td");
