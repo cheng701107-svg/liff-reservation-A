@@ -77,6 +77,16 @@
         word-break: break-all;
     }
 
+    .status-text {
+        color: #d32f2f;       /* 狀態：紅色 */
+        font-weight: 700;
+    }
+
+    .payment-text {
+        color: #1976d2;       /* 收款：藍色 */
+        font-weight: 600;
+    }
+
     .none {
         color: red;
         font-size: 18px;
@@ -103,7 +113,7 @@
 </div>
 
 <script>
-// ★ GAS API（後端已支援用 uid 查詢）
+// ★ GAS API（後端已支援用 uid 查詢，且回傳 status / payment）
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
@@ -185,11 +195,14 @@ async function initLiffAndSearch() {
       return;
     }
 
-    // 6. 有紀錄 → 顯示（欄位對應 GAS：time / uid / email / name / phone / house / date / days / adult / child / pet / note）
+    // 6. 有紀錄 → 顯示
+    // 欄位對應 GAS：time / uid / email / name / phone / house / date / days / adult / child / pet / note / status / payment
     let html = "";
     data.forEach(d => {
       const createdText = formatDateTime(d.time); // 建立時間
       const checkinText = formatDateTime(d.date); // 入住日
+      const statusText  = d.status  || "待確認";
+      const paymentText = d.payment || "未收款";
 
       html += `
         <div class="record">
@@ -232,6 +245,14 @@ async function initLiffAndSearch() {
                 <td>${d.house || ""}</td>
               </tr>
               <tr>
+                <th>狀態</th>
+                <td><span class="status-text">${statusText}</span></td>
+              </tr>
+              <tr>
+                <th>收款</th>
+                <td><span class="payment-text">${paymentText}</span></td>
+              </tr>
+              <tr>
                 <th>備註</th>
                 <td>${d.note || "（無）"}</td>
               </tr>
@@ -256,4 +277,3 @@ async function initLiffAndSearch() {
 
 </body>
 </html>
-
