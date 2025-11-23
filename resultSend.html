@@ -27,7 +27,6 @@ const API_URL =
 
 async function main() {
     try {
-
         /* ----------------------------------------------------
            LIFF 初始化
         ---------------------------------------------------- */
@@ -53,7 +52,7 @@ async function main() {
         const pet      = url.searchParams.get("pet");
         const note     = url.searchParams.get("note") || "";
 
-        // ★ 新增：從 URL 取得 uid / email / lineName
+        // 🔸 新增：從 URL 取得 uid / email / lineName
         const uid      = url.searchParams.get("uid")      || "";
         const email    = url.searchParams.get("email")    || "";
         const lineName = url.searchParams.get("lineName") || "";
@@ -87,7 +86,7 @@ async function main() {
 
         /* ----------------------------------------------------
            送出資料到 Google Sheet
-           👉 重點：不要加 headers、加上 mode:"no-cors"
+           👉 不加 headers，使用 no-cors 避免 CORS 問題
         ---------------------------------------------------- */
         try {
             await fetch(API_URL, {
@@ -110,3 +109,52 @@ async function main() {
 `📘 您的預訂已收到！
 
 👤 姓名：${name}
+📱 手機：${phone}
+🏡 館別：${house}
+📅 包棟日期：${date}
+🌙 包棟天數：${days} 晩
+🧑‍🧑‍🧒 大人：${adult} 位
+🧒 小孩：${child} 位
+🐶 寵物：${pet}
+📝 備註：
+${note || "無"}
+
+我們會盡快與您聯繫，謝謝您！`;
+
+        // 先更新畫面，避免真的關不掉視窗時看起來一直卡住
+        document.getElementById("status").innerText =
+            "✅ 資料已送出，請稍後留意 LINE 確認訊息。";
+
+        if (liff.isInClient()) {
+            try {
+                await liff.sendMessages([{ type: "text", text: msg }]);
+            } catch (e) {
+                console.error("回傳 LINE 訊息失敗：", e);
+                // 就算訊息沒成功送出，也不要阻止流程
+            }
+
+            // 嘗試關閉視窗（在 LINE 內才有效）
+            try {
+                liff.closeWindow();
+            } catch (e) {
+                console.error("關閉 LIFF 視窗失敗：", e);
+                // 失敗就讓使用者自己按右上角關閉
+            }
+        } else {
+            // 如果不是在 LINE 內，就只顯示完成訊息
+            document.getElementById("status").innerText =
+                "✅ 資料已送出，請關閉此頁面並回到 LINE 查看確認訊息。";
+        }
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById("status").innerText =
+            "❗ 系統發生錯誤：" + (err.message || err);
+    }
+}
+
+main();
+</script>
+
+</body>
+</html>
