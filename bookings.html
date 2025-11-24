@@ -35,23 +35,14 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwyDvx82gKgUUcyP-Ke7KJw1wVA2thbiGjhb0IO1-NbEUO5CqnXaz--SPSKEYUUB5tj/exec";
 const LIFF_ID = "2008409020-k4Oy7Y0D";
 
-// --- 安全轉義，避免 XSS ---
-function esc(s) {
-  if (!s) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
-    // 若未登入 → 自動登入
     if (!liff.isLoggedIn()) {
+      console.log("尚未登入，進行登入");
       liff.login();
       return;
     }
@@ -59,11 +50,13 @@ async function init() {
     const profile = await liff.getProfile();
     const uid = profile.userId;
 
+    console.log("取得到的 UID：", uid);
+
     loadBookings(uid);
 
   } catch (err) {
-    document.getElementById("list").textContent =
-      "LIFF 初始化失敗：" + err;
+    document.getElementById("list").textContent = "LIFF 初始化失敗： " + err;
+    console.error("LIFF 初始化失敗：", err);
   }
 }
 
@@ -71,52 +64,34 @@ async function loadBookings(uid) {
   const listEl = document.getElementById("list");
 
   try {
-    const res = await fetch(`${API_URL}?action=getUserBookings&uid=${uid}&ts=${Date.now()}`);
+    const url = `${API_URL}?action=getUserBookings&uid=${uid}&ts=${Date.now()}`;
+    console.log("呼叫 API：", url);
+
+    const res = await fetch(url);
     const json = await res.json();
 
+    console.log("API 回傳內容：", json);
+
     if (!json.success) {
-      listEl.textContent = "讀取失敗：" + json.error;
+      listEl.textContent = "API 錯誤：" + json.error;
       return;
     }
 
-    const items = json.bookings;
-
-    if (!items || items.length === 0) {
+    if (json.bookings.length === 0) {
       listEl.textContent = "目前沒有訂房紀錄。";
       return;
     }
 
-    listEl.innerHTML = items.map(b => `
-      <div class="card">
-        <div class="title">訂單編號：${esc(b.id)}</div>
-        <div class="row">入住日期：${esc(b.date)}</div>
-        <div class="row">住宿天數：${esc(b.nights)} 晚</div>
-        <div class="row">館別：${esc(b.house)}</div>
-        <div class="row">人數：大人 ${esc(b.adult)} / 小孩 ${esc(b.child)}</div>
-        <div class="row">寵物：${esc(b.pet)}</div>
-        <div class="row">備註：${esc(b.note || "—")}</div>
-        <div class="status ${statusColor(b.status)}">狀態：${esc(b.status)}</div>
-        <div class="status">收款：${esc(b.payment)}</div>
-      </div>
-    `).join("");
+    // 渲染 UI...
 
   } catch (err) {
-    listEl.textContent = "無法連線到伺服器，請稍後再試。";
+    listEl.textContent = "讀取失敗：" + err;
+    console.error("API 發生錯誤：", err);
   }
-}
-
-function statusColor(s) {
-  if (!s) return "wait";
-
-  s = s.trim();
-
-  if (["已訂房", "已入住", "已完成", "完成"].includes(s)) return "ok";
-  if (["待確認", "處理中"].includes(s)) return "wait";
-  if (["已取消", "取消"].includes(s)) return "cancel";
-
-  return "wait"; // default
 }
 </script>
 
+
 </body>
 </html>
+
