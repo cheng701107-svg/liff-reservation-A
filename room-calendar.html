@@ -8,16 +8,21 @@
 <style>
   body {
     font-family: "Noto Sans TC", sans-serif;
-    padding: 20px;
+    padding: 16px;
   }
 
   h2 { margin: 0 0 10px; }
 
+  .house-switch {
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+
   .month-nav {
     display: flex;
     justify-content: space-between;
-    margin: 10px 0 20px;
-    font-size: 22px;
+    margin: 6px 0 12px;
+    font-size: 20px;
     font-weight: 700;
   }
 
@@ -32,8 +37,8 @@
     grid-template-columns: repeat(7, 1fr);
     text-align: center;
     font-weight: 700;
-    margin-bottom: 10px;
-    font-size: 20px;
+    margin-bottom: 8px;
+    font-size: 16px;
   }
 
   /* 六日紅字 */
@@ -46,51 +51,54 @@
   .calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
+    gap: 6px;
   }
 
   .day {
-    padding: 12px 4px;
+    padding: 8px 2px;
     border-radius: 8px;
     border: 1px solid #ccc;
     text-align: center;
-    font-size: 20px;
-    position: relative;
+    font-size: 16px;
   }
 
-  /* 六日粉色背景 */
+  /* 六日淡粉背景 */
   .weekend {
-    background: #ffe5e5 !important;
-    color: #b40000 !important;
+    background: #ffe5e5;
+    color: #b40000;
   }
 
   /* 額滿 */
   .full {
-    background: #ffdddd !important;
-    color: red !important;
-    border: 2px solid red !important;
+    background: #ffdddd;
+    color: red;
+    border: 2px solid red;
     font-weight: 900;
   }
 
   /* 尚未滿 */
   .free {
-    background: #77dd77 !important;
-    color: white !important;
+    background: #77dd77;
+    color: #ffffff;
     font-weight: 900;
   }
 
   /* 今天 */
   .today {
-    border: 3px solid #06c755 !important;
+    border: 3px solid #06c755;
   }
 
-  /* 🔒 今天以前：灰色、不能點 */
+  /* 今天以前：灰色、不能訂 */
   .disabled {
-    background: #e5e5e5 !important;
-    color: #999 !important;
-    border: 1px solid #ccc !important;
-    pointer-events: none;
-    opacity: 0.7;
+    background: #e5e5e5;
+    color: #999;
+    border: 1px solid #ccc;
+  }
+
+  .loading {
+    font-size: 14px;
+    margin-top: 8px;
+    color: #666;
   }
 </style>
 </head>
@@ -124,149 +132,121 @@
 </div>
 
 <div id="calendar" class="calendar"></div>
+<div id="loading" class="loading"></div>
 
 <script>
-// ★ 你的 GAS API
+// ★ GAS API（同一支 Script）
 const API =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-let CACHE = null; // { "A館": [...], "B館": [...] }
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1; // 1~12
+let FULL_DATES   = []; // 本月已滿日期（字串陣列 YYYY-MM-DD）
 
-let currentYear = new Date().getFullYear();
-let currentMonth = new Date().getMonth();
-
-/* 從 GAS 抓房況 */
-async function initRoomData(force = false) {
-  if (!force && CACHE) return;
-  const res = await fetch(API + "?action=getRoomStatus&ts=" + Date.now());
-  CACHE = await res.json();
+function normalizeDateString(value) {
+  if (!value) return "";
+  let s = typeof value === "string" ? value : String(value);
+  if (s.indexOf("T") >= 0) s = s.split("T")[0];
+  return s.trim();
 }
 
-/* 產生日曆 */
-function generateCalendar() {
+// 從後端抓取某館別某年月的滿房日
+async function fetchCalendarFullDates() {
   const house = document.getElementById("house").value;
-  const fullDates = (CACHE && CACHE[house]) ? CACHE[house] : [];
+  const url = `${API}?action=getCalendar&house=${
+    encodeURIComponent(house)
+  }&year=${currentYear}&month=${currentMonth}&ts=${Date.now()}`;
 
-  const cal = document.getElementById("calendar");
+  document.getElementById("loading").textContent = "載入房況中…";
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    FULL_DATES = (data.fullDates || []).map(normalizeDateString);
+    document.getElementById("loading").textContent = "";
+  } catch (err) {
+    console.error(err);
+    document.getElementById("loading").textContent = "房況讀取失敗";
+    FULL_DATES = [];
+  }
+}
+
+function renderCalendar() {
+  const house = document.getElementById("house").value;
+  const cal   = document.getElementById("calendar");
   cal.innerHTML = "";
 
   document.getElementById("monthLabel").textContent =
-    `${currentYear} 年 ${currentMonth + 1} 月`;
+    `${house}｜${currentYear} 年 ${currentMonth} 月`;
 
-  const first = new Date(currentYear, currentMonth, 1).getDay();
-  const days  = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-  // 補空白
-  for (let i = 0; i < first; i++) {
-    cal.innerHTML += `<div></div>`;
-  }
+  const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
 
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  for (let d = 1; d <= days; d++) {
-    const dateStr =
-      `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  // 補空白
+  for (let i = 0; i < firstDay; i++) {
+    cal.appendChild(document.createElement("div"));
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cellDate = new Date(currentYear, currentMonth - 1, d);
+    cellDate.setHours(0,0,0,0);
+    const dateStr = normalizeDateString(cellDate);
 
     const div = document.createElement("div");
     div.classList.add("day");
 
-    const cellDate = new Date(currentYear, currentMonth, d);
-    cellDate.setHours(0, 0, 0, 0);
-
     const dow = cellDate.getDay();
+    if (dow === 0 || dow === 6) div.classList.add("weekend");
 
-    // 🔒 今天以前 → 灰色＋不能點
     if (cellDate < today) {
       div.classList.add("disabled");
       div.textContent = d;
-      cal.appendChild(div);
-      continue;
+    } else if (FULL_DATES.includes(dateStr)) {
+      div.classList.add("full");
+      div.textContent = "滿";
+    } else {
+      div.classList.add("free");
+      div.textContent = d;
     }
 
-    if (dow === 0 || dow === 6) div.classList.add("weekend");
-
-    // 今日框起來
     if (cellDate.getTime() === today.getTime()) {
       div.classList.add("today");
     }
 
-    // 已滿
-    if (fullDates.includes(dateStr)) {
-      div.classList.add("full");
-      div.textContent = "滿";
-      div.onclick = () => updateRoom(dateStr, house, "");
-      cal.appendChild(div);
-      continue;
-    }
-
-    // 可預訂
-    div.classList.add("free");
-    div.textContent = d;
-    div.onclick = () => updateRoom(dateStr, house, "滿");
     cal.appendChild(div);
   }
 }
 
-// ★ 寫入 GAS 的 function
-async function updateRoom(dateStr, house, status) {
-  const body = {
-    action: "updateRoomStatus",
-    admin_key: "admin2025",
-    house,
-    date: dateStr,
-    status
-  };
-
-  const res = await fetch(API, {
-    method: "POST",
-    body: JSON.stringify(body)
-  });
-
-  const json = await res.json();
-
-  if (json.success) {
-    // 成功後強制重新抓一次房況
-    await initRoomData(true);
-    generateCalendar();
-  } else {
-    alert("更新失敗：" + json.error);
-  }
+async function loadCalendar() {
+  await fetchCalendarFullDates();
+  renderCalendar();
 }
-
-/* 提供給外部（admin.html）呼叫：force=true 時會重抓 GAS */
-async function loadCalendar(force = false) {
-  await initRoomData(force);
-  generateCalendar();
-}
-
-// 讓 parent iframe 可以呼叫
-window.loadCalendar = loadCalendar;
 
 document.getElementById("prev").onclick = async () => {
   currentMonth--;
-  if (currentMonth < 0) {
-    currentMonth = 11;
+  if (currentMonth < 1) {
+    currentMonth = 12;
     currentYear--;
   }
-  await loadCalendar(false);
+  await loadCalendar();
 };
 
 document.getElementById("next").onclick = async () => {
   currentMonth++;
-  if (currentMonth > 11) {
-    currentMonth = 0;
+  if (currentMonth > 12) {
+    currentMonth = 1;
     currentYear++;
   }
-  await loadCalendar(false);
+  await loadCalendar();
 };
 
-document.getElementById("house").addEventListener("change", () => {
-  generateCalendar();
-});
+document.getElementById("house").addEventListener("change", loadCalendar);
 
 // 啟動
-loadCalendar(true);
+loadCalendar();
 </script>
 
 </body>
