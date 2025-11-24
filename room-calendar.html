@@ -125,13 +125,15 @@
 <div id="calendar" class="calendar"></div>
 
 <script>
-// 同一支 GAS
+// ★ 同一支 GAS
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
 const ADMIN_KEY = "admin2025";
 
-let ROOM_CACHE = null;
+// ★ 預設就給一個空的，避免 undefined
+let ROOM_CACHE = { "A館": [], "B館": [] };
+
 let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth(); // 0-11
 
@@ -153,19 +155,37 @@ function formatDateOnly(value) {
   return String(value).trim();
 }
 
-/* 抓房況：{ "A館": ["2025-02-01", ...], "B館": [...] } */
+/* 只負責「盡量」抓房況，如果失敗就 log + 繼續用預設空陣列 */
 async function fetchRoomStatus() {
-  const res = await fetch(API_URL + "?action=getRoomStatus&ts=" + Date.now());
-  const data = await res.json();
-  ROOM_CACHE = data || { "A館": [], "B館": [] };
+  try {
+    const url = API_URL + "?action=getRoomStatus&ts=" + Date.now();
+    const res = await fetch(url);
+    const text = await res.text();
+    console.log("getRoomStatus raw:", text);
+
+    try {
+      const data = JSON.parse(text);
+      if (data && typeof data === "object") {
+        ROOM_CACHE = data;
+      } else {
+        console.warn("getRoomStatus 解析後不是物件，沿用預設 ROOM_CACHE");
+      }
+    } catch (e) {
+      console.warn("getRoomStatus JSON.parse 失敗，沿用預設 ROOM_CACHE", e);
+    }
+  } catch (err) {
+    console.error("fetchRoomStatus 發生錯誤，沿用預設 ROOM_CACHE", err);
+  }
 }
 
-/* 畫日曆 */
+/* 畫日曆（不依賴 API 一定成功） */
 function generateCalendar() {
-  if (!ROOM_CACHE) return;
+  const houseSelect = document.getElementById("house");
+  if (!houseSelect) return;
 
-  const house = document.getElementById("house").value;
-  const fullDates = (ROOM_CACHE[house] || []).map(formatDateOnly);
+  const house = houseSelect.value;
+  const fullDatesRaw = ROOM_CACHE[house] || [];
+  const fullDates = fullDatesRaw.map(formatDateOnly);
 
   const cal = document.getElementById("calendar");
   cal.innerHTML = "";
@@ -265,7 +285,10 @@ async function toggleRoom(dateStr, house, toFull) {
     const list = ROOM_CACHE[house] || [];
 
     if (toFull) {
-      if (!list.includes(normalizedDate)) list.push(normalizedDate);
+      if (!list.some(d => formatDateOnly(d) === normalizedDate)) {
+        list.push(normalizedDate);
+      }
+      ROOM_CACHE[house] = list;
     } else {
       ROOM_CACHE[house] = list.filter(d => formatDateOnly(d) !== normalizedDate);
     }
@@ -278,20 +301,16 @@ async function toggleRoom(dateStr, house, toFull) {
   }
 }
 
-/* 提供給外部（admin.html）呼叫：強制重抓 + 重畫 */
+/* 提供給 admin.html 呼叫：強制重抓 + 重畫 */
 async function loadCalendar(forceReload = false) {
-  if (!ROOM_CACHE || forceReload) {
-    try {
-      await fetchRoomStatus();
-    } catch (e) {
-      console.error("抓房況失敗", e);
-      return;
-    }
+  // 如果 forceReload 為 true，或 ROOM_CACHE 還是預設空，就重抓
+  if (forceReload || !ROOM_CACHE || (!ROOM_CACHE["A館"] && !ROOM_CACHE["B館"])) {
+    await fetchRoomStatus();
   }
   generateCalendar();
 }
 
-// 揭露在 window 讓父頁面可呼叫
+// 掛在 window 給父頁面使用（雖然現在 admin 是用重新載入 src）
 window.loadCalendar = loadCalendar;
 
 /* 上 / 下個月 */
@@ -315,7 +334,7 @@ document.getElementById("next").onclick = () => {
 
 document.getElementById("house").addEventListener("change", generateCalendar);
 
-/* 啟動 */
+/* 啟動（先嘗試抓資料，失敗也會畫出空日曆） */
 loadCalendar(true);
 </script>
 
