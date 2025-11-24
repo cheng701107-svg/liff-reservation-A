@@ -215,6 +215,7 @@
 
 <div class="wrapper">
 
+  <!-- 搜尋 -->
   <section class="section">
     <h2>🔍 搜尋訂房資料</h2>
     <div class="search-row">
@@ -229,6 +230,7 @@
     <div id="bookingsStatus" class="loading">載入中…</div>
   </section>
 
+  <!-- 訂房清單 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
     <div style="overflow-x:auto;">
@@ -254,6 +256,7 @@
     </div>
   </section>
 
+  <!-- 房況日曆 -->
   <section class="section">
     <h2>🏡 房況管理</h2>
     <iframe
@@ -320,11 +323,36 @@
 
 <script>
 const API_URL   =
- "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec"; // 換成最新部署的 URL
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskW0aLReBUfUBQ3X_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 let editingBooking = null;
+
+// ------- 共用：呼叫 GAS API + debug log -------
+async function callApi(body) {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(body)          // 不加 headers，避免多一個 preflight
+    });
+
+    const text = await res.text();
+    console.log("API raw 回傳:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("JSON 解析失敗，可能是登入畫面或錯誤頁", e);
+      throw new Error("API 回傳不是 JSON，請檢查 Web App 是否公開給『任何人』存取。");
+    }
+    return data;
+  } catch (err) {
+    console.error("callApi 失敗:", err);
+    throw err;
+  }
+}
 
 function normalizeDateString(v) {
   if (!v) return "";
@@ -344,7 +372,7 @@ function formatDateOnly(value) {
   }
 
   const s = String(value).trim();
-  const m1 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  let m1 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (m1) {
     const y  = m1[1];
     const mm = m1[2].padStart(2, "0");
@@ -352,7 +380,7 @@ function formatDateOnly(value) {
     return `${y}-${mm}-${dd}`;
   }
 
-  const m2 = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})$/);
+  let m2 = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})$/);
   if (m2) {
     const y  = m2[1];
     const mm = m2[2].padStart(2, "0");
@@ -367,43 +395,42 @@ function formatDateOnly(value) {
     const dd2 = String(d2.getDate()).padStart(2, "0");
     return `${y2}-${m3}-${dd2}`;
   }
-
   return s;
 }
 
-/* 從後端抓全部訂房資料 */
+/* 讀取全部訂單 */
 async function loadBookings() {
   const statusEl = document.getElementById("bookingsStatus");
   statusEl.textContent = "載入中…";
+  statusEl.className = "loading";
 
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "getAll",        // GAS 會走到 getAllBookings()
-        admin_key: ADMIN_KEY
-      })
+    const data = await callApi({
+      action: "getAllBookings",       // GAS 有同時接受 getAll / getAllBookings
+      admin_key: ADMIN_KEY
     });
 
-    const data = await res.json();
-    console.log("getAll 回傳", data);
-
-    if (!data.success) {
-      throw new Error(data.error || "API 回傳失敗");
+    // 兼容：如果以前是直接回傳陣列
+    if (Array.isArray(data)) {
+      allBookings = data;
+    } else {
+      if (!data.success) {
+        throw new Error(data.error || "API 回傳失敗");
+      }
+      allBookings = Array.isArray(data.bookings) ? data.bookings : [];
     }
 
-    allBookings = Array.isArray(data.bookings) ? data.bookings : [];
     statusEl.textContent = `共 ${allBookings.length} 筆訂房資料`;
-
+    statusEl.className = "loading";
     renderTable();
   } catch (e) {
-    console.error(e);
+    console.error("loadBookings 錯誤:", e);
     statusEl.textContent = "讀取訂房資料失敗，請稍後再試。";
     statusEl.className = "error";
   }
 }
 
-/* 依關鍵字過濾並畫出表格 */
+/* 畫表格 */
 function renderTable(keyword = "") {
   const tbody = document.getElementById("bookingBody");
   tbody.innerHTML = "";
@@ -503,7 +530,7 @@ function renderTable(keyword = "") {
   });
 }
 
-/* 開啟修改視窗 */
+/* 開啟 / 關閉 Modal */
 function openEditModal(booking) {
   editingBooking = booking;
 
@@ -524,10 +551,9 @@ function closeEditModal() {
   editingBooking = null;
   document.getElementById("editModal").style.display = "none";
 }
-
 document.getElementById("editCancelBtn").addEventListener("click", closeEditModal);
 
-/* 儲存修改：先檢查新日期是否已滿房 */
+/* 儲存修改（先檢查新日期是否滿房） */
 document.getElementById("editForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!editingBooking) return;
@@ -553,13 +579,13 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   const oldHouse   = editingBooking.house;
   const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
 
+  // 檢查新日期是否已滿房
   try {
     const d = new Date(newDateStr);
     const y = d.getFullYear();
     const m = d.getMonth() + 1;
-    const url = `${API_URL}?action=getCalendar&house=${
-      encodeURIComponent(newHouse)
-    }&year=${y}&month=${m}&ts=${Date.now()}`;
+    const url =
+      `${API_URL}?action=getCalendar&house=${encodeURIComponent(newHouse)}&year=${y}&month=${m}&ts=${Date.now()}`;
     const res = await fetch(url);
     const data = await res.json();
     const fullDates = (data.fullDates || []).map(normalizeDateString);
@@ -606,12 +632,12 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   }
 });
 
-/* 後端：update 整筆訂單（不含狀態/收款） */
+/* 後端：update 整筆訂單 */
 async function updateBookingFields(id, newData) {
-  const payload = {
+  const data = await callApi({
     action: "update",
     admin_key: ADMIN_KEY,
-    id: id,
+    id,
     name:  newData.name,
     phone: newData.phone,
     house: newData.house,
@@ -621,62 +647,46 @@ async function updateBookingFields(id, newData) {
     child: newData.child,
     pet:   newData.pet,
     note:  newData.note
-  };
-
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
   });
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error(json.error || "更新訂單資料失敗");
+  if (!data.success) {
+    throw new Error(data.error || "更新訂單資料失敗");
   }
 }
 
 /* 後端：update 狀態 */
 async function updateBookingStatus(id, newStatus) {
-  const payload = {
+  const data = await callApi({
     action: "updateStatus",
     admin_key: ADMIN_KEY,
-    id: id,
+    id,
     status: newStatus
-  };
-
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
   });
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error(json.error || "更新狀態失敗");
+  if (!data.success) {
+    throw new Error(data.error || "更新狀態失敗");
   }
 }
 
 /* 後端：update 收款 */
 async function updateBookingPayment(id, newPayment) {
-  const payload = {
+  const data = await callApi({
     action: "updatePayment",
     admin_key: ADMIN_KEY,
-    id: id,
+    id,
     payment: newPayment
-  };
-
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
   });
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error(json.error || "更新收款狀態失敗");
+  if (!data.success) {
+    throw new Error(data.error || "更新收款狀態失敗");
   }
 }
 
 /* 讓日曆重抓資料 */
 function reloadRoomCalendar() {
   const iframe = document.querySelector(".room-calendar-frame");
-  if (iframe && iframe.contentWindow && typeof iframe.contentWindow.loadCalendar === "function") {
+  if (!iframe) return;
+
+  if (iframe.contentWindow && typeof iframe.contentWindow.loadCalendar === "function") {
     iframe.contentWindow.loadCalendar();
-  } else if (iframe) {
+  } else {
     const base = iframe.src.split("?")[0];
     iframe.src = base + "?t=" + Date.now();
   }
