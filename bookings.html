@@ -35,53 +35,86 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwyDvx82gKgUUcyP-Ke7KJw1wVA2thbiGjhb0IO1-NbEUO5CqnXaz--SPSKEYUUB5tj/exec";
 const LIFF_ID = "2008409020-k4Oy7Y0D";
 
+// --- 安全轉義，避免 XSS ---
+function esc(s) {
+  if (!s) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
-  await liff.init({ liffId: LIFF_ID });
-  const profile = await liff.getProfile();
-  const uid = profile.userId;
+  try {
+    await liff.init({ liffId: LIFF_ID });
 
-  loadBookings(uid);
+    // 若未登入 → 自動登入
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+
+    const profile = await liff.getProfile();
+    const uid = profile.userId;
+
+    loadBookings(uid);
+
+  } catch (err) {
+    document.getElementById("list").textContent =
+      "LIFF 初始化失敗：" + err;
+  }
 }
 
 async function loadBookings(uid) {
-  const res = await fetch(`${API_URL}?action=getUserBookings&uid=${uid}&ts=${Date.now()}`);
-  const json = await res.json();
-
   const listEl = document.getElementById("list");
 
-  if (!json.success) {
-    listEl.textContent = "讀取失敗：" + json.error;
-    return;
+  try {
+    const res = await fetch(`${API_URL}?action=getUserBookings&uid=${uid}&ts=${Date.now()}`);
+    const json = await res.json();
+
+    if (!json.success) {
+      listEl.textContent = "讀取失敗：" + json.error;
+      return;
+    }
+
+    const items = json.bookings;
+
+    if (!items || items.length === 0) {
+      listEl.textContent = "目前沒有訂房紀錄。";
+      return;
+    }
+
+    listEl.innerHTML = items.map(b => `
+      <div class="card">
+        <div class="title">訂單編號：${esc(b.id)}</div>
+        <div class="row">入住日期：${esc(b.date)}</div>
+        <div class="row">住宿天數：${esc(b.nights)} 晚</div>
+        <div class="row">館別：${esc(b.house)}</div>
+        <div class="row">人數：大人 ${esc(b.adult)} / 小孩 ${esc(b.child)}</div>
+        <div class="row">寵物：${esc(b.pet)}</div>
+        <div class="row">備註：${esc(b.note || "—")}</div>
+        <div class="status ${statusColor(b.status)}">狀態：${esc(b.status)}</div>
+        <div class="status">收款：${esc(b.payment)}</div>
+      </div>
+    `).join("");
+
+  } catch (err) {
+    listEl.textContent = "無法連線到伺服器，請稍後再試。";
   }
-
-  const items = json.bookings;
-
-  if (items.length === 0) {
-    listEl.textContent = "目前沒有訂房紀錄。";
-    return;
-  }
-
-  listEl.innerHTML = items.map(b => `
-    <div class="card">
-      <div class="title">訂單編號：${b.id}</div>
-      <div class="row">入住日期：${b.date}</div>
-      <div class="row">住宿天數：${b.nights} 晚</div>
-      <div class="row">館別：${b.house}</div>
-      <div class="row">人數：大人 ${b.adult} / 小孩 ${b.child}</div>
-      <div class="row">寵物：${b.pet}</div>
-      <div class="row">備註：${b.note || "—"}</div>
-      <div class="status ${statusColor(b.status)}">狀態：${b.status}</div>
-      <div class="status">收款：${b.payment}</div>
-    </div>
-  `).join("");
 }
 
 function statusColor(s) {
-  if (s === "已訂房" || s === "已入住") return "ok";
-  if (s === "待確認") return "wait";
-  return "cancel";  // 已取消
+  if (!s) return "wait";
+
+  s = s.trim();
+
+  if (["已訂房", "已入住", "已完成", "完成"].includes(s)) return "ok";
+  if (["待確認", "處理中"].includes(s)) return "wait";
+  if (["已取消", "取消"].includes(s)) return "cancel";
+
+  return "wait"; // default
 }
 </script>
 
