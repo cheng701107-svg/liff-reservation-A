@@ -144,7 +144,8 @@
       <input type="hidden" id="uid" />
       <input type="hidden" id="email" />
 
-      <div class="field">
+      <!-- 姓名：從 LINE 取得就隱藏這一塊 -->
+      <div class="field" id="nameField">
         <label for="name">姓名（必填）</label>
         <input type="text" id="name" required />
       </div>
@@ -238,21 +239,23 @@
 </div>
 
 <script>
-// ======== 常數設定 ========
+// ========= 常數 =========
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 const LIFF_ID = "2008409020-Way8kzM7";
 
-// ======== DOM 變數 ========
+// ========= DOM =========
 const statusLine       = document.getElementById("statusLine");
 const submitBtn        = document.getElementById("submitBtn");
 const availabilityHint = document.getElementById("availabilityHint");
 const uidInput         = document.getElementById("uid");
 const emailInput       = document.getElementById("email");
+const nameInput        = document.getElementById("name");
+const nameField        = document.getElementById("nameField");
 
-let currentFullDatesCache = []; // 暫存當月滿房日
+let currentFullDatesCache = [];
 
-// --- 日期工具：標準化 YYYY-MM-DD ---
+// 日期標準化
 function normalizeDateString(v) {
   if (!v) return "";
   let s = typeof v === "string" ? v : String(v);
@@ -260,7 +263,7 @@ function normalizeDateString(v) {
   return s.trim();
 }
 
-// 設定入住日 min = 今天
+// 入住日 min = 今天
 function setMinDate() {
   const today = new Date();
   const y  = today.getFullYear();
@@ -269,25 +272,24 @@ function setMinDate() {
   document.getElementById("date").setAttribute("min", `${y}-${m}-${d}`);
 }
 
-// ======== LIFF 初始化：改版 ========
+// 初始化
 document.addEventListener("DOMContentLoaded", () => {
   setMinDate();
   initLiff();
   bindFormEvents();
 });
 
+// ===== LIFF 初始化（帶入姓名 & 隱藏欄位）=====
 async function initLiff() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
-    // 不在 LINE App 內，且尚未登入 → 走 LINE Login
     if (!liff.isInClient() && !liff.isLoggedIn()) {
       statusLine.textContent = "將前往 LINE 登入頁面，登入後會自動回到此預訂畫面…";
       liff.login({ redirectUri: window.location.href });
-      return; // 之後會重新載入，不再往下執行
+      return;
     }
 
-    // 此時要嘛在 LINE App 內，要嘛已經登入（瀏覽器）
     let profile = null;
     try {
       profile = await liff.getProfile();
@@ -295,14 +297,23 @@ async function initLiff() {
       console.warn("取得 profile 失敗：", e);
     }
 
-    const userId = profile?.userId || "";
-    const displayName = profile?.displayName || "貴賓";
+    const userId      = profile?.userId || "";
+    const displayName = profile?.displayName || "";
 
+    // 帶入 UID
     if (userId) {
       uidInput.value = userId;
     }
 
-    // 嘗試從 ID Token 取得 email（需在 LINE Developers 開啟 email 權限）
+    // 有 displayName → 當成姓名，塞進 input 並把欄位隱藏
+    if (displayName) {
+      nameInput.value = displayName;
+      if (nameField) {
+        nameField.style.display = "none"; // 不再顯示姓名欄位
+      }
+    }
+
+    // 嘗試從 ID Token 取 email
     try {
       if (typeof liff.getDecodedIDToken === "function") {
         const decoded = liff.getDecodedIDToken();
@@ -314,15 +325,14 @@ async function initLiff() {
       console.warn("解析 ID Token 失敗：", e);
     }
 
-    // 顯示狀態文字（依是否在 LINE App 內，給不同提示，但不再恐嚇 XD）
     if (userId) {
       if (liff.isInClient()) {
-        statusLine.innerHTML = `已從 LINE App 開啟，<strong>${displayName}</strong> 您好，請填寫預訂資訊。`;
+        statusLine.innerHTML = `已從 LINE App 開啟，<strong>${displayName || "貴賓"}</strong> 您好，請填寫預訂資訊。`;
       } else {
-        statusLine.innerHTML = `<strong>${displayName}</strong> 您好，目前在瀏覽器中使用，本次預訂會綁定您的 LINE 帳號。`;
+        statusLine.innerHTML = `<strong>${displayName || "貴賓"}</strong> 您好，目前在瀏覽器中使用，本次預訂會綁定您的 LINE 帳號。`;
       }
     } else {
-      statusLine.textContent = "目前無法取得 LINE 帳號，仍可直接填寫預訂（不會綁定 LINE 帳號）。";
+      statusLine.textContent = "目前無法取得 LINE 帳號，仍可直接填寫預訂（不會綁定 LINE）。";
     }
 
     submitBtn.disabled = false;
@@ -333,7 +343,7 @@ async function initLiff() {
   }
 }
 
-// ======== 房況檢查 ========
+// ===== 房況檢查 =====
 function bindFormEvents() {
   document.getElementById("house").addEventListener("change", checkAvailability);
   document.getElementById("date").addEventListener("change", checkAvailability);
@@ -397,11 +407,11 @@ async function checkAvailability() {
   }
 }
 
-// ======== 送出預訂 ========
+// ===== 送出預訂（包含 LINE 摘要）=====
 async function onSubmitBooking(e) {
   e.preventDefault();
 
-  const name   = document.getElementById("name").value.trim();
+  const name   = (nameInput.value || "").trim();  // 可能從 LINE 帶入
   let   phone  = document.getElementById("phone").value.trim();
   const house  = document.getElementById("house").value;
   const date   = document.getElementById("date").value;
@@ -415,11 +425,13 @@ async function onSubmitBooking(e) {
   const email  = emailInput.value || "";
 
   if (!name) {
-    alert("請輸入姓名");
+    alert("姓名取得失敗，請重新整理畫面或手動輸入。");
+    // 如果你想讓使用者手動輸入，可以把 nameField 顯示回來：
+    nameField.style.display = "block";
     return;
   }
 
-  phone = phone.replace(/[^0-9]/g, "");
+  phone = phone.replace(/[^0-9]/g, "");   // 完整保留 09xxxxxxxx
   if (!/^09\d{8}$/.test(phone)) {
     alert("手機格式錯誤，必須為 09 開頭 10 碼");
     return;
@@ -444,11 +456,97 @@ async function onSubmitBooking(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = "送出中…";
 
+  // ========= 給 LINE 用的文字摘要 =========
+  const summaryText =
+`靖寬靖廣 預訂摘要
+姓名：${name}
+手機：${phone}
+館別：${house}
+入住日：${dateStr}
+住宿：${nights} 晚
+人數：大人 ${adult} 位 / 小孩 ${child} 位
+寵物：${pet || "無"}
+備註：${note || "無"}`;
+
+  // ========= Flex 訊息（給後端 push 用）=========
+  const flexMessage = {
+    type: "bubble",
+    size: "mega",
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      contents: [
+        {
+          type: "text",
+          text: "靖寬靖廣 預訂成功",
+          weight: "bold",
+          size: "lg",
+          color: "#06c755"
+        },
+        {
+          type: "text",
+          text: "以下為您的預訂摘要，請再次確認內容是否正確。",
+          wrap: true,
+          size: "sm",
+          color: "#555555"
+        },
+        {
+          type: "separator",
+          margin: "md"
+        },
+        {
+          type: "box",
+          layout: "vertical",
+          margin: "md",
+          spacing: "xs",
+          contents: [
+            row("姓名",  name),
+            row("手機",  phone),
+            row("館別",  house),
+            row("入住日", dateStr),
+            row("住宿", `${nights} 晚`),
+            row("人數", `大人 ${adult} / 小孩 ${child}`),
+            row("寵物", pet || "無"),
+            row("備註", note || "無")
+          ]
+        }
+      ]
+    }
+  };
+
+  // 小工具：做一列 key/value
+  function row(label, value) {
+    return {
+      type: "box",
+      layout: "baseline",
+      spacing: "sm",
+      contents: [
+        {
+          type: "text",
+          text: label,
+          color: "#999999",
+          size: "sm",
+          flex: 2
+        },
+        {
+          type: "text",
+          text: String(value),
+          color: "#333333",
+          size: "sm",
+          flex: 5,
+          wrap: true
+        }
+      ]
+    };
+  }
+
+  // ========= 傳給 GAS 的 payload =========
   const payload = {
     action: "createBooking",
-    uid:    uid,
+    uid:    uid,      // 後端可以用這個 userId push LINE 訊息
     name:   name,
-    phone:  phone,
+    phone:  phone,    // 保持字串，避免掉 0
     email:  email,
     house:  house,
     date:   dateStr,
@@ -456,7 +554,9 @@ async function onSubmitBooking(e) {
     adult:  adult,
     child:  child,
     pet:    pet,
-    note:   note
+    note:   note,
+    summaryText: summaryText,     // 後端若只想發文字，可用這個
+    flexMessage: flexMessage      // 後端呼叫 Messaging API push Flex
   };
 
   try {
@@ -479,6 +579,7 @@ async function onSubmitBooking(e) {
     document.getElementById("house").value = keepHouse;
     availabilityHint.textContent = "";
     availabilityHint.className = "availability";
+
   } catch (err) {
     console.error(err);
     alert("預訂失敗，請稍後再試或改用 LINE 私訊管家。");
