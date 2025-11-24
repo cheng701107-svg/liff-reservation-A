@@ -2,11 +2,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>靖寬靖廣 — 線上預訂</title>
+<title>靖寬靖廣 — 管理後台</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-<!-- LIFF SDK -->
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
   body {
@@ -19,243 +16,316 @@
     background: #06c755;
     color: #fff;
     padding: 16px;
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 900;
     text-align: center;
   }
 
-  .container {
-    max-width: 560px;
+  .wrapper {
+    max-width: 1200px;
     margin: 0 auto;
     padding: 16px;
   }
 
-  .card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 18px 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  h2 {
+    margin: 16px 0 8px;
+    font-size: 20px;
   }
 
-  h2 {
-    margin: 0 0 10px;
+  .section {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .search-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: #06c755;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-edit {
+    background: #1976d2;
+    color: #fff;
+  }
+
+  .loading,
+  .error {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .loading { color: #666; }
+  .error   { color: #d32f2f; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  thead {
+    background: #00b33c;
+    color: #fff;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+    font-size: 14px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+  }
+
+  th { font-weight: 700; }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .status-select {
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid #f0a0a0;
+    color: #d32f2f;
+    font-weight: 700;
+    background: #fff0f0;
+  }
+
+  .payment-select {
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid #999;
+    color: #1976d2;
+    background: #ffffff;
+    font-weight: 600;
+  }
+
+  .room-calendar-frame {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    height: 560px;
+    background: #fff;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+
+  .modal {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    width: 90%;
+    max-width: 420px;
+    box-sizing: border-box;
+  }
+
+  .modal h3 {
+    margin: 0 0 12px;
     font-size: 18px;
   }
 
-  .field {
-    margin-bottom: 12px;
+  .modal .field {
+    margin-bottom: 10px;
   }
 
-  .field label {
+  .modal label {
     display: block;
-    margin-bottom: 4px;
     font-size: 14px;
-    font-weight: 700;
+    margin-bottom: 4px;
   }
 
-  .field small {
-    display: block;
-    font-size: 12px;
-    color: #666;
-  }
-
-  input[type="text"],
-  input[type="tel"],
-  input[type="number"],
-  input[type="date"],
-  select,
-  textarea {
+  .modal input,
+  .modal select,
+  .modal textarea {
     width: 100%;
     box-sizing: border-box;
     padding: 8px 10px;
     font-size: 14px;
-    border-radius: 8px;
+    border-radius: 6px;
     border: 1px solid #ccc;
   }
 
-  textarea {
-    resize: vertical;
-    min-height: 60px;
+  .modal textarea { resize: vertical; }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
   }
 
-  .btn-submit {
-    width: 100%;
-    padding: 12px;
-    border-radius: 999px;
-    border: none;
-    background: #06c755;
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 8px;
+  .btn-cancel {
+    background: #e0e0e0;
+    color: #333;
   }
 
-  .btn-submit:disabled {
-    background: #9e9e9e;
-    cursor: not-allowed;
-  }
-
-  .hint {
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 8px;
-  }
-
-  .availability {
-    font-size: 13px;
-    margin-top: 4px;
-  }
-
-  .availability.ok {
-    color: #2e7d32;
-  }
-
-  .availability.full {
-    color: #d32f2f;
-    font-weight: 700;
-  }
-
-  .status-line {
-    font-size: 13px;
-    margin-bottom: 8px;
-    color: #666;
-  }
-
-  .status-line strong {
-    color: #06c755;
+  @media (max-width: 768px) {
+    th, td {
+      font-size: 13px;
+      padding: 8px 4px;
+    }
   }
 </style>
 </head>
 
 <body>
 
-<header>靖寬靖廣 — 線上預訂</header>
+<header>靖寬靖廣 — 管理後台</header>
 
-<div class="container">
-  <div class="card">
-    <h2>請填寫預訂資訊</h2>
-    <div id="statusLine" class="status-line">
-      正在連線 LINE 帳號，請稍候…
+<div class="wrapper">
+
+  <section class="section">
+    <h2>🔍 搜尋訂房資料</h2>
+    <div class="search-row">
+      <input
+        id="keyword"
+        type="text"
+        placeholder="輸入姓名、手機、館別或入住日期（YYYY-MM-DD）"
+      />
+      <button class="btn btn-primary" id="btnSearch">搜尋</button>
+      <button class="btn" id="btnClear">清除</button>
     </div>
+    <div id="bookingsStatus" class="loading">載入中…</div>
+  </section>
 
-    <form id="bookingForm">
-      <!-- 隱藏欄位：LINE UID / email -->
-      <input type="hidden" id="uid" />
-      <input type="hidden" id="email" />
+  <section class="section">
+    <h2>📋 訂房清單</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>手機</th>
+            <th>入住日</th>
+            <th>館別</th>
+            <th>天數</th>
+            <th>大人</th>
+            <th>小孩</th>
+            <th>寵物</th>
+            <th>備註</th>
+            <th>狀態</th>
+            <th>收款</th>
+            <th>管理</th>
+          </tr>
+        </thead>
+        <tbody id="bookingBody"></tbody>
+      </table>
+    </div>
+  </section>
 
-      <!-- 姓名：預設顯示；若從 LINE 拿到 displayName 就會自動帶入並隱藏 -->
-      <div class="field" id="nameField">
-        <label for="name">姓名（必填）</label>
-        <input type="text" id="name" required />
-      </div>
+  <section class="section">
+    <h2>🏡 房況管理</h2>
+    <iframe
+      src="/room-calendar.html"
+      class="room-calendar-frame"
+      title="房況管理日曆"
+    ></iframe>
+  </section>
 
+</div>
+
+<!-- 修改訂單 Modal -->
+<div id="editModal" class="modal-overlay">
+  <div class="modal">
+    <h3>修改訂單</h3>
+    <form id="editForm">
       <div class="field">
-        <label for="phone">手機（必填，10 碼）</label>
-        <input
-          type="tel"
-          id="phone"
-          maxlength="10"
-          placeholder="0912345678"
-          required
-        />
-        <small>請輸入 09 開頭的 10 碼手機號碼</small>
+        <label>姓名</label>
+        <input type="text" id="editName" required />
       </div>
-
       <div class="field">
-        <label for="house">館別</label>
-        <select id="house">
+        <label>手機（10 碼）</label>
+        <input type="tel" id="editPhone" maxlength="10" required />
+      </div>
+      <div class="field">
+        <label>入住日（YYYY-MM-DD）</label>
+        <input type="date" id="editCheckin" required />
+      </div>
+      <div class="field">
+        <label>館別</label>
+        <select id="editHouse">
           <option value="A館">A館</option>
           <option value="B館">B館</option>
         </select>
       </div>
-
       <div class="field">
-        <label for="date">入住日</label>
-        <input type="date" id="date" required />
-        <div id="availabilityHint" class="availability"></div>
+        <label>天數</label>
+        <input type="number" id="editDays" min="1" />
       </div>
-
       <div class="field">
-        <label for="nights">住宿天數</label>
-        <input
-          type="number"
-          id="nights"
-          min="1"
-          value="1"
-          required
-        />
-        <small>若連續入住多晚，請輸入總晚數（例如住 2 晚就填 2）</small>
+        <label>大人</label>
+        <input type="number" id="editAdult" min="1" />
       </div>
-
       <div class="field">
-        <label for="adult">大人數量</label>
-        <input
-          type="number"
-          id="adult"
-          min="1"
-          value="2"
-          required
-        />
+        <label>小孩</label>
+        <input type="number" id="editChild" min="0" />
       </div>
-
       <div class="field">
-        <label for="child">小孩數量</label>
-        <input
-          type="number"
-          id="child"
-          min="0"
-          value="0"
-          required
-        />
+        <label>寵物</label>
+        <input type="text" id="editPet" />
       </div>
-
       <div class="field">
-        <label for="pet">寵物</label>
-        <input
-          type="text"
-          id="pet"
-          placeholder="例如：無 / 1 隻狗 / 2 隻貓"
-        />
+        <label>備註</label>
+        <textarea id="editNote" rows="3"></textarea>
       </div>
 
-      <div class="field">
-        <label for="note">其他備註</label>
-        <textarea
-          id="note"
-          placeholder="可以填寫預計抵達時間、特殊需求…"
-        ></textarea>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-cancel" id="editCancelBtn">取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
       </div>
-
-      <div class="hint">
-        ※ 此表單送出後，管家會再與您確認，狀態為「已訂房」後即完成預訂。
-      </div>
-
-      <button type="submit" id="submitBtn" class="btn-submit" disabled>
-        送出預訂
-      </button>
     </form>
   </div>
 </div>
 
 <script>
-// ========= 常數 =========
 const API_URL =
- "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
-const LIFF_ID = "2008409020-k4Oy7Y0D";
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskW04LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+const ADMIN_KEY = "admin2025";
 
-// ========= DOM =========
-const statusLine       = document.getElementById("statusLine");
-const submitBtn        = document.getElementById("submitBtn");
-const availabilityHint = document.getElementById("availabilityHint");
-const uidInput         = document.getElementById("uid");
-const emailInput       = document.getElementById("email");
-const nameInput        = document.getElementById("name");
-const nameField        = document.getElementById("nameField");
+let allBookings = [];
+let editingBooking = null;
 
-let currentFullDatesCache = [];
-
-// 把日期轉成 YYYY-MM-DD
 function normalizeDateString(v) {
   if (!v) return "";
   let s = typeof v === "string" ? v : String(v);
@@ -263,282 +333,372 @@ function normalizeDateString(v) {
   return s.trim();
 }
 
-// 入住日最小值 = 今天
-function setMinDate() {
-  const today = new Date();
-  const y  = today.getFullYear();
-  const m  = String(today.getMonth() + 1).padStart(2, "0");
-  const d  = String(today.getDate()).padStart(2, "0");
-  document.getElementById("date").setAttribute("min", `${y}-${m}-${d}`);
+// 一律輸出 YYYY-MM-DD
+function formatDateOnly(value) {
+  if (!value) return "";
+
+  if (value instanceof Date) {
+    const y  = value.getFullYear();
+    const m  = String(value.getMonth() + 1).padStart(2, "0");
+    const d  = String(value.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const s = String(value).trim();
+
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const y  = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
+  m = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})$/);
+  if (m) {
+    const y  = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
+  const d2 = new Date(s);
+  if (!isNaN(d2.getTime())) {
+    const y2  = d2.getFullYear();
+    const m2  = String(d2.getMonth() + 1).padStart(2, "0");
+    const dd2 = String(d2.getDate()).padStart(2, "0");
+    return `${y2}-${m2}-${dd2}`;
+  }
+
+  return s;
 }
 
-// 初始化
-document.addEventListener("DOMContentLoaded", () => {
-  setMinDate();
-  initLiff();
-  bindFormEvents();
-});
-
-// ===== LIFF 初始化：自動帶入姓名，能取得就把姓名欄位藏起來 =====
-async function initLiff() {
-  try {
-    await liff.init({ liffId: LIFF_ID });
-
-    // 如果不是在 LINE App 裡 & 還沒登入，導去登入
-    if (!liff.isInClient() && !liff.isLoggedIn()) {
-      statusLine.textContent = "將前往 LINE 登入頁面，登入後會自動回到此預訂畫面…";
-      liff.login({ redirectUri: window.location.href });
-      return;
-    }
-
-    let profile = null;
-    try {
-      profile = await liff.getProfile();
-    } catch (e) {
-      console.warn("取得 profile 失敗：", e);
-    }
-
-    const userId      = profile?.userId || "";
-    const displayName = profile?.displayName || "";
-
-    if (userId) {
-      uidInput.value = userId;
-    }
-
-    // 從 LINE 帶入姓名並隱藏欄位
-    if (displayName) {
-      nameInput.value = displayName;
-      nameInput.readOnly = true;
-      if (nameField) {
-        nameField.style.display = "none";
-      }
-    }
-
-    // 嘗試從 ID Token 拿 email（如果 LIFF 有勾 email 權限）
-    try {
-      if (typeof liff.getDecodedIDToken === "function") {
-        const decoded = liff.getDecodedIDToken();
-        if (decoded && decoded.email) {
-          emailInput.value = decoded.email;
-        }
-      }
-    } catch (e) {
-      console.warn("解析 ID Token 失敗：", e);
-    }
-
-    if (userId) {
-      if (liff.isInClient()) {
-        statusLine.innerHTML =
-          `已從 LINE App 開啟，<strong>${displayName || "貴賓"}</strong> 您好，請確認預訂資訊。`;
-      } else {
-        statusLine.innerHTML =
-          `<strong>${displayName || "貴賓"}</strong> 您好，目前在瀏覽器中使用，本次預訂會綁定您的 LINE 帳號。`;
-      }
-    } else {
-      statusLine.textContent =
-        "目前無法取得 LINE 帳號，仍可直接填寫預訂（本次不會綁定 LINE）。";
-    }
-
-    submitBtn.disabled = false;
-  } catch (err) {
-    console.error("LIFF 初始化失敗：", err);
-    statusLine.textContent =
-      "LIFF 初始化失敗，您仍可直接填寫預訂（本次不會綁定 LINE）。";
-    submitBtn.disabled = false;
-  }
-}
-
-// ===== 綁定欄位事件（檢查房況 + 送出）=====
-function bindFormEvents() {
-  document.getElementById("house").addEventListener("change", checkAvailability);
-  document.getElementById("date").addEventListener("change", checkAvailability);
-  document.getElementById("nights").addEventListener("input", checkAvailability);
-
-  document.getElementById("bookingForm").addEventListener("submit", onSubmitBooking);
-}
-
-// ===== 檢查房況 =====
-async function checkAvailability() {
-  const house  = document.getElementById("house").value;
-  const date   = document.getElementById("date").value;
-  const nights = parseInt(document.getElementById("nights").value || "1", 10);
-
-  const dateStr = normalizeDateString(date);
-
-  availabilityHint.textContent = "";
-  availabilityHint.className = "availability";
-  submitBtn.disabled = false;
-
-  if (!house || !dateStr || isNaN(nights) || nights <= 0) return;
-
-  try {
-    const d = new Date(dateStr);
-    const year  = d.getFullYear();
-    const month = d.getMonth() + 1;
-
-    const url = `${API_URL}?action=getCalendar&house=${encodeURIComponent(
-      house
-    )}&year=${year}&month=${month}&ts=${Date.now()}`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    currentFullDatesCache = (data.fullDates || []).map(normalizeDateString);
-
-    const conflictDates = [];
-    for (let i = 0; i < nights; i++) {
-      const dt = new Date(dateStr);
-      dt.setDate(dt.getDate() + i);
-      const y  = dt.getFullYear();
-      const m  = String(dt.getMonth() + 1).padStart(2, "0");
-      const dd = String(dt.getDate()).padStart(2, "0");
-      const s  = `${y}-${m}-${dd}`;
-      if (currentFullDatesCache.includes(s)) conflictDates.push(s);
-    }
-
-    if (conflictDates.length > 0) {
-      availabilityHint.textContent =
-        `⚠ 此區間含有已滿房日期：${conflictDates.join("、")}，請改選其他入住日或縮短天數。`;
-      availabilityHint.classList.add("full");
-      submitBtn.disabled = true;
-    } else {
-      availabilityHint.textContent = "✅ 此區間目前尚有空房，歡迎預訂。";
-      availabilityHint.classList.add("ok");
-      submitBtn.disabled = false;
-    }
-  } catch (err) {
-    console.error("檢查房況失敗：", err);
-    availabilityHint.textContent =
-      "無法即時確認房況，仍可送出，實際以管家回覆為準。";
-    availabilityHint.classList.add("full");
-  }
-}
-
-// ===== 送出預訂 ＋ 使用者自己分享摘要到 LINE =====
-async function onSubmitBooking(e) {
-  e.preventDefault();
-
-  const name   = (nameInput.value || "").trim();
-  let   phone  = document.getElementById("phone").value.trim();
-  const house  = document.getElementById("house").value;
-  const date   = document.getElementById("date").value;
-  const nights = parseInt(document.getElementById("nights").value || "1", 10);
-  const adult  = parseInt(document.getElementById("adult").value || "1", 10);
-  const child  = parseInt(document.getElementById("child").value || "0", 10);
-  const pet    = document.getElementById("pet").value.trim();
-  const note   = document.getElementById("note").value.trim();
-
-  const uid    = uidInput.value || "";
-  const email  = emailInput.value || "";
-
-  if (!name) {
-    alert("姓名取得失敗，請重新整理畫面或手動輸入。");
-    nameField.style.display = "block";
-    nameInput.readOnly = false;
-    return;
-  }
-
-  phone = phone.replace(/[^0-9]/g, "");
-  if (!/^09\d{8}$/.test(phone)) {
-    alert("手機格式錯誤，必須為 09 開頭 10 碼");
-    return;
-  }
-
-  if (!house) {
-    alert("請選擇館別");
-    return;
-  }
-
-  const dateStr = normalizeDateString(date);
-  if (!dateStr) {
-    alert("請選擇入住日期");
-    return;
-  }
-
-  if (!nights || nights <= 0) {
-    alert("天數必須大於等於 1");
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = "送出中…";
-
-  // 傳給 GAS 的資料（不再包含 summaryText / flexMessage）
-  const payload = {
-    action: "createBooking",
-    uid:    uid,
-    name:   name,
-    phone:  phone,
-    email:  email,
-    house:  house,
-    date:   dateStr,
-    nights: nights,
-    adult:  adult,
-    child:  child,
-    pet:    pet,
-    note:   note
-  };
+/* 從後端抓全部訂房資料 */
+async function loadBookings() {
+  const statusEl = document.getElementById("bookingsStatus");
+  statusEl.className = "loading";
+  statusEl.textContent = "載入中…";
 
   try {
     const res = await fetch(API_URL, {
       method: "POST",
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        action: "getAllBookings",  // GAS 支援 getAll / getAllBookings
+        admin_key: ADMIN_KEY
+      })
     });
 
-    const json = await res.json();
-    console.log("createBooking 回傳", json);
+    const data = await res.json();
+    console.log("getAllBookings 回傳", data);
 
-    if (!json.success) {
-      throw new Error(json.error || "預訂失敗");
+    if (!data.success) {
+      throw new Error(data.error || "API 回傳失敗");
     }
 
-    const bookingId = json.id || "";
-
-    // 組合預訂摘要文字（給 shareTargetPicker 用）
-    const summaryText =
-`靖寬靖廣 預訂摘要
-訂單編號：${bookingId}
-姓名：${name}
-手機：${phone}
-館別：${house}
-入住日：${dateStr}
-住宿：${nights} 晚
-人數：大人 ${adult} 位 / 小孩 ${child} 位
-寵物：${pet || "無"}
-備註：${note || "無"}
-
-待管家回覆「已訂房」後即完成預訂。`;
-
-    // 優先用 shareTargetPicker，訊息由「使用者自己」發出，不會扣 Bot 額度
-    if (liff.isInClient() && liff.isApiAvailable("shareTargetPicker")) {
-      try {
-        await liff.shareTargetPicker([
-          { type: "text", text: summaryText }
-        ]);
-        alert("已送出預訂！預訂摘要已在 LINE 分享給您，請留存備查。");
-      } catch (shareErr) {
-        console.error("shareTargetPicker 失敗：", shareErr);
-        alert("已送出預訂！若需備份資訊，可截圖此畫面或使用訂房查詢功能。");
-      }
-    } else {
-      alert("已送出預訂！請截圖此畫面或使用訂房查詢功能備份資料。");
-    }
-
-    // 清空表單（保留館別）
-    const keepHouse = house;
-    document.getElementById("bookingForm").reset();
-    document.getElementById("house").value = keepHouse;
-    availabilityHint.textContent = "";
-    availabilityHint.className = "availability";
-
-  } catch (err) {
-    console.error(err);
-    alert("預訂失敗，請稍後再試或改用 LINE 私訊管家。");
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "送出預訂";
+    allBookings = Array.isArray(data.bookings) ? data.bookings : [];
+    statusEl.textContent = `共 ${allBookings.length} 筆訂房資料`;
+    renderTable();
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = "讀取訂房資料失敗，請稍後再試。";
+    statusEl.className = "error";
   }
 }
+
+/* 依關鍵字過濾並畫出表格 */
+function renderTable(keyword = "") {
+  const tbody = document.getElementById("bookingBody");
+  tbody.innerHTML = "";
+
+  const kw = keyword.trim().toLowerCase();
+
+  const filtered = allBookings.filter(b => {
+    if (!kw) return true;
+    const fields = [
+      b.name, b.phone, b.house, b.date,
+      b.note, b.status, b.payment
+    ].filter(Boolean).map(x => String(x).toLowerCase());
+    return fields.some(x => x.includes(kw));
+  });
+
+  filtered.forEach(booking => {
+    const tr = document.createElement("tr");
+    const dateText = formatDateOnly(booking.date);
+
+    tr.innerHTML = `
+      <td>${booking.name  || ""}</td>
+      <td>${booking.phone || ""}</td>
+      <td>${dateText      || ""}</td>
+      <td>${booking.house || ""}</td>
+      <td>${booking.nights || booking.days || ""}</td>
+      <td>${booking.adult || ""}</td>
+      <td>${booking.child || ""}</td>
+      <td>${booking.pet   || ""}</td>
+      <td>${booking.note  || ""}</td>
+    `;
+
+    // 狀態
+    const tdStatus = document.createElement("td");
+    const statusSel = document.createElement("select");
+    statusSel.className = "status-select";
+    ["待確認","已訂房","已入住","已取消"].forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      statusSel.appendChild(opt);
+    });
+    const currentStatus = booking.status || "待確認";
+    statusSel.value = currentStatus;
+    statusSel.addEventListener("change", async () => {
+      const newStatus = statusSel.value;
+      const oldStatus = booking.status || "待確認";
+      try {
+        await updateBookingStatus(booking.id, newStatus);
+        booking.status = newStatus;
+        reloadRoomCalendar();
+      } catch (e) {
+        console.error(e);
+        alert("更新狀態失敗，請稍後再試");
+        statusSel.value = oldStatus;
+      }
+    });
+    tdStatus.appendChild(statusSel);
+    tr.appendChild(tdStatus);
+
+    // 收款
+    const tdPay = document.createElement("td");
+    const paySel = document.createElement("select");
+    paySel.className = "payment-select";
+    ["未收款","已收訂金","已收尾款"].forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p;
+      paySel.appendChild(opt);
+    });
+    const currentPay = booking.payment || "未收款";
+    paySel.value = currentPay;
+    paySel.addEventListener("change", async () => {
+      const newPay = paySel.value;
+      const oldPay = booking.payment || "未收款";
+      try {
+        await updateBookingPayment(booking.id, newPay);
+        booking.payment = newPay;
+      } catch (e) {
+        console.error(e);
+        alert("更新收款狀態失敗，請稍後再試");
+        paySel.value = oldPay;
+      }
+    });
+    tdPay.appendChild(paySel);
+    tr.appendChild(tdPay);
+
+    // 管理（修改）
+    const tdManage = document.createElement("td");
+    const btnEdit = document.createElement("button");
+    btnEdit.className = "btn btn-edit";
+    btnEdit.textContent = "修改";
+    btnEdit.addEventListener("click", () => openEditModal(booking));
+    tdManage.appendChild(btnEdit);
+    tr.appendChild(tdManage);
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* 開啟修改視窗 */
+function openEditModal(booking) {
+  editingBooking = booking;
+
+  document.getElementById("editName").value    = booking.name  || "";
+  document.getElementById("editPhone").value   = booking.phone || "";
+  document.getElementById("editCheckin").value = formatDateOnly(booking.date);
+  document.getElementById("editHouse").value   = booking.house || "A館";
+  document.getElementById("editDays").value    = booking.nights || booking.days || 1;
+  document.getElementById("editAdult").value   = booking.adult || 1;
+  document.getElementById("editChild").value   = booking.child || 0;
+  document.getElementById("editPet").value     = booking.pet   || "";
+  document.getElementById("editNote").value    = booking.note  || "";
+
+  document.getElementById("editModal").style.display = "flex";
+}
+
+function closeEditModal() {
+  editingBooking = null;
+  document.getElementById("editModal").style.display = "none";
+}
+
+document.getElementById("editCancelBtn").addEventListener("click", closeEditModal);
+
+/* 儲存修改：先檢查新日期是否已滿房 */
+document.getElementById("editForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!editingBooking) return;
+
+  const newName   = document.getElementById("editName").value.trim();
+  let   newPhone  = document.getElementById("editPhone").value.trim();
+  const newDate   = document.getElementById("editCheckin").value;
+  const newHouse  = document.getElementById("editHouse").value;
+  const newDays   = document.getElementById("editDays").value;
+  const newAdult  = document.getElementById("editAdult").value;
+  const newChild  = document.getElementById("editChild").value;
+  const newPet    = document.getElementById("editPet").value;
+  const newNote   = document.getElementById("editNote").value;
+
+  newPhone = newPhone.replace(/[^0-9]/g, "");
+  if (!/^09\d{8}$/.test(newPhone)) {
+    alert("手機格式錯誤，必須為 09 開頭 10 碼");
+    return;
+  }
+
+  const newDateStr = normalizeDateString(newDate);
+  const oldDateStr = formatDateOnly(editingBooking.date);
+  const oldHouse   = editingBooking.house;
+  const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
+
+  // 先查該月日曆，看新日期是否已滿房（且不是原本那一天）
+  try {
+    const d = new Date(newDateStr);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const url = `${API_URL}?action=getCalendar&house=${
+      encodeURIComponent(newHouse)
+    }&year=${y}&month=${m}&ts=${Date.now()}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    const fullDates = (data.fullDates || []).map(normalizeDateString);
+
+    if (!isSameAsOriginal && fullDates.includes(newDateStr)) {
+      alert(`「${newHouse}」在 ${newDateStr} 已滿房，請改選其他日期。`);
+      return;
+    }
+  } catch (err) {
+    console.error(err);
+    alert("檢查房況失敗，請稍後再試。");
+    return;
+  }
+
+  try {
+    await updateBookingFields(editingBooking.id, {
+      name:  newName,
+      phone: newPhone,
+      date:  newDateStr,
+      house: newHouse,
+      days:  newDays,
+      adult: newAdult,
+      child: newChild,
+      pet:   newPet,
+      note:  newNote
+    });
+
+    editingBooking.name   = newName;
+    editingBooking.phone  = newPhone;
+    editingBooking.date   = newDateStr;
+    editingBooking.house  = newHouse;
+    editingBooking.nights = newDays;
+    editingBooking.adult  = newAdult;
+    editingBooking.child  = newChild;
+    editingBooking.pet    = newPet;
+    editingBooking.note   = newNote;
+
+    closeEditModal();
+    renderTable(document.getElementById("keyword").value);
+    reloadRoomCalendar();
+  } catch (err) {
+    console.error(err);
+    alert("更新訂單資料失敗，請稍後再試");
+  }
+});
+
+/* 後端：update 整筆訂單（不含狀態/收款） */
+async function updateBookingFields(id, newData) {
+  const payload = {
+    action: "updateBooking",
+    admin_key: ADMIN_KEY,
+    id: id,
+    name:  newData.name,
+    phone: newData.phone,
+    house: newData.house,
+    date:  newData.date,
+    days:  newData.days,
+    adult: newData.adult,
+    child: newData.child,
+    pet:   newData.pet,
+    note:  newData.note
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if (!json.success) {
+    throw new Error(json.error || "更新訂單資料失敗");
+  }
+}
+
+/* 後端：update 狀態 */
+async function updateBookingStatus(id, newStatus) {
+  const payload = {
+    action: "updateStatus",
+    admin_key: ADMIN_KEY,
+    id: id,
+    status: newStatus
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if (!json.success) {
+    throw new Error(json.error || "更新狀態失敗");
+  }
+}
+
+/* 後端：update 收款 */
+async function updateBookingPayment(id, newPayment) {
+  const payload = {
+    action: "updatePayment",
+    admin_key: ADMIN_KEY,
+    id: id,
+    payment: newPayment
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if (!json.success) {
+    throw new Error(json.error || "更新收款狀態失敗");
+  }
+}
+
+/* 讓日曆重抓資料 */
+function reloadRoomCalendar() {
+  const iframe = document.querySelector(".room-calendar-frame");
+  if (iframe && iframe.contentWindow && typeof iframe.contentWindow.loadCalendar === "function") {
+    iframe.contentWindow.loadCalendar();
+  } else if (iframe) {
+    const base = iframe.src.split("?")[0];
+    iframe.src = base + "?t=" + Date.now();
+  }
+}
+
+/* 搜尋 / 清除 */
+document.getElementById("btnSearch").addEventListener("click", () => {
+  const kw = document.getElementById("keyword").value;
+  renderTable(kw);
+});
+
+document.getElementById("btnClear").addEventListener("click", () => {
+  document.getElementById("keyword").value = "";
+  renderTable("");
+});
+
+/* 啟動 */
+loadBookings();
 </script>
 
 </body>
