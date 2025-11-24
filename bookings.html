@@ -41,24 +41,31 @@ async function init() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
+    // ⬇️ 關鍵：登入後 liff.init() 會在 redirect 回來時自動帶上 context
     if (!liff.isLoggedIn()) {
-      console.log("尚未登入，進行登入");
-      liff.login();
+      liff.login({ redirectUri: window.location.href });
+      return;
+    }
+
+    // ⬇️ 若是 redirect 回來的頁面，必須等 LIFF 完成初始化後再繼續
+    if (!liff.isInClient() && !liff.getContext()) {
+      console.log("尚未準備好，稍後再試");
       return;
     }
 
     const profile = await liff.getProfile();
     const uid = profile.userId;
-
-    console.log("取得到的 UID：", uid);
+    console.log("UID:", uid);
 
     loadBookings(uid);
 
   } catch (err) {
-    document.getElementById("list").textContent = "LIFF 初始化失敗： " + err;
     console.error("LIFF 初始化失敗：", err);
+    document.getElementById("list").textContent =
+      "LIFF 初始化失敗：" + err;
   }
 }
+
 
 async function loadBookings(uid) {
   const listEl = document.getElementById("list");
@@ -94,5 +101,6 @@ async function loadBookings(uid) {
 
 </body>
 </html>
+
 
 
