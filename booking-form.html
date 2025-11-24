@@ -412,11 +412,10 @@ async function checkAvailability() {
   }
 }
 
-// ===== 送出預訂（包含 LINE 圖卡摘要）=====
 async function onSubmitBooking(e) {
   e.preventDefault();
 
-  const name   = (nameInput.value || "").trim();  // 可能從 LINE 帶入
+  const name   = (nameInput.value || "").trim();
   let   phone  = document.getElementById("phone").value.trim();
   const house  = document.getElementById("house").value;
   const date   = document.getElementById("date").value;
@@ -435,14 +434,9 @@ async function onSubmitBooking(e) {
     return;
   }
 
-  phone = phone.replace(/[^0-9]/g, "");   // 完整保留 09xxxxxxxx
+  phone = phone.replace(/[^0-9]/g, "");
   if (!/^09\d{8}$/.test(phone)) {
-    alert("手機格式錯誤，必須為 09 開頭 10 碼");
-    return;
-  }
-
-  if (!house) {
-    alert("請選擇館別");
+    alert("手機格式錯誤");
     return;
   }
 
@@ -452,48 +446,17 @@ async function onSubmitBooking(e) {
     return;
   }
 
-  if (!nights || nights <= 0) {
-    alert("天數必須大於等於 1");
-    return;
-  }
-
   submitBtn.disabled = true;
   submitBtn.textContent = "送出中…";
 
-  // ========= 給使用者看的文字摘要 =========
-  const summaryText =
-`靖寬靖廣 預訂摘要
-姓名：${name}
-手機：${phone}
-館別：${house}
-入住日：${dateStr}
-住宿：${nights} 晚
-人數：大人 ${adult} 位 / 小孩 ${child} 位
-寵物：${pet || "無"}
-備註：${note || "無"}`;
-
-  // ========= Flex 圖卡內容 =========
+  // ===== Flex Bubble for LINE =====
   function row(label, value) {
     return {
       type: "box",
       layout: "baseline",
-      spacing: "sm",
       contents: [
-        {
-          type: "text",
-          text: label,
-          color: "#999999",
-          size: "sm",
-          flex: 2
-        },
-        {
-          type: "text",
-          text: String(value),
-          color: "#333333",
-          size: "sm",
-          flex: 5,
-          wrap: true
-        }
+        { type: "text", text: label, size: "sm", color: "#888", flex: 2 },
+        { type: "text", text: value, size: "sm", color: "#111", flex: 5, wrap: true }
       ]
     };
   }
@@ -506,56 +469,29 @@ async function onSubmitBooking(e) {
       layout: "vertical",
       spacing: "md",
       contents: [
-        {
-          type: "text",
-          text: "靖寬靖廣 預訂成功",
-          weight: "bold",
-          size: "lg",
-          color: "#06c755"
-        },
-        {
-          type: "text",
-          text: "以下為您的預訂摘要，請再次確認內容是否正確。",
-          wrap: true,
-          size: "sm",
-          color: "#555555"
-        },
+        { type: "text", text: "靖寬靖廣 預訂成功", weight: "bold", size: "lg", color: "#06c755" },
+        { type: "text", text: "以下為您的預訂摘要，請再次確認內容是否正確。", wrap: true, size: "sm", color: "#555" },
         { type: "separator", margin: "md" },
-        {
-          type: "box",
-          layout: "vertical",
-          margin: "md",
-          spacing: "xs",
-          contents: [
-            row("姓名",  name),
-            row("手機",  phone),
-            row("館別",  house),
+        { type: "box", layout: "vertical", spacing: "xs", margin: "md", contents: [
+            row("姓名", name),
+            row("手機", phone),
+            row("館別", house),
             row("入住日", dateStr),
             row("住宿", `${nights} 晚`),
             row("人數", `大人 ${adult} / 小孩 ${child}`),
             row("寵物", pet || "無"),
             row("備註", note || "無")
-          ]
-        }
+        ]}
       ]
     }
   };
 
-  // ========= 傳給 GAS =========
+  // ===== 傳給 GAS 寫入試算表 =====
   const payload = {
     action: "createBooking",
-    uid:    uid,
-    name:   name,
-    phone:  phone,
-    email:  email,
-    house:  house,
-    date:   dateStr,
-    nights: nights,
-    adult:  adult,
-    child:  child,
-    pet:    pet,
-    note:   note
-    // summaryText / flexBubble 不再送到後端，前端自己 sendMessages
+    uid, name, phone, email,
+    house, date: dateStr,
+    nights, adult, child, pet, note
   };
 
   try {
@@ -563,49 +499,43 @@ async function onSubmitBooking(e) {
       method: "POST",
       body: JSON.stringify(payload)
     });
-
     const json = await res.json();
-    console.log("createBooking 回傳", json);
 
-    if (!json.success) {
-      throw new Error(json.error || "預訂失敗");
-    }
+    if (!json.success) throw new Error(json.error);
 
-    // ========= 在 LINE 聊天室裡回傳圖卡給使用者（不扣 push 額度）=========
-    if (canSendLineMessage && liff.isInClient()) {
+    // ===== 成功後 → LIFF 送出圖卡（不扣額度）=====
+    if (liff.isInClient()) {
       try {
         await liff.sendMessages([
           {
             type: "flex",
-            altText: "靖寬靖廣預訂摘要",
+            altText: "靖寬靖廣預訂成功",
             contents: flexBubble
           }
         ]);
-        console.log("sendMessages 成功");
       } catch (err) {
         console.warn("sendMessages 失敗：", err);
-        // 就算失敗也不要阻止預訂成功，只是少了一張圖卡
       }
     }
 
-    alert("已送出預訂！管家將盡快與您確認訂房。");
+    alert("已送出預訂！管家將盡快與您確認。");
 
-    // 清空表單（保留館別）
+    // 清空表單
     const keepHouse = house;
     document.getElementById("bookingForm").reset();
     document.getElementById("house").value = keepHouse;
-    availabilityHint.textContent = "";
-    availabilityHint.className = "availability";
 
   } catch (err) {
     console.error(err);
-    alert("預訂失敗，請稍後再試或改用 LINE 私訊管家。");
+    alert("預訂失敗，請稍後再試。");
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "送出預訂";
   }
 }
+
 </script>
 
 </body>
 </html>
+
