@@ -325,6 +325,8 @@ const ADMIN_KEY = "admin2025";
 let allBookings = [];
 let editingBooking = null;
 
+/* ===== 共用小工具 ===== */
+
 function normalizeDateString(v) {
   if (!v) return "";
   let s = typeof v === "string" ? v : String(v);
@@ -336,7 +338,6 @@ function normalizeDateString(v) {
 function formatDateOnly(value) {
   if (!value) return "";
 
-  // 已經是 Date 物件
   if (value instanceof Date) {
     const y  = value.getFullYear();
     const m  = String(value.getMonth() + 1).padStart(2, "0");
@@ -346,7 +347,6 @@ function formatDateOnly(value) {
 
   const s = String(value).trim();
 
-  // 已經是 YYYY-MM-DD
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (m) {
     const y  = m[1];
@@ -355,7 +355,6 @@ function formatDateOnly(value) {
     return `${y}-${mm}-${dd}`;
   }
 
-  // YYYY/MM/DD 或 YYYY.MM.DD
   m = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})$/);
   if (m) {
     const y  = m[1];
@@ -364,7 +363,6 @@ function formatDateOnly(value) {
     return `${y}-${mm}-${dd}`;
   }
 
-  // 最後再丟給 new Date 嘗試解析
   const d2 = new Date(s);
   if (!isNaN(d2.getTime())) {
     const y2  = d2.getFullYear();
@@ -373,11 +371,30 @@ function formatDateOnly(value) {
     return `${y2}-${m2}-${dd2}`;
   }
 
-  // 實在解析不了，就原樣丟出去（至少不會噴錯）
   return s;
 }
 
-/* 從後端抓全部訂單 */
+/* 重新整理 iframe 裡的房況日曆 */
+function reloadRoomCalendar() {
+  const iframe = document.querySelector(".room-calendar-frame");
+  if (!iframe) return;
+
+  try {
+    const win = iframe.contentWindow;
+    if (win && typeof win.loadCalendar === "function") {
+      // 若 room-calendar.html 有定義全域 loadCalendar
+      win.loadCalendar(true);
+    } else {
+      // 否則直接重載 iframe（加時間戳避免 cache）
+      const baseSrc = iframe.src.split("#")[0].split("?")[0];
+      iframe.src = baseSrc + "?t=" + Date.now();
+    }
+  } catch (e) {
+    console.warn("重新載入房況日曆失敗：", e);
+  }
+}
+
+/* ===== 從後端抓全部訂單 ===== */
 async function loadBookings() {
   const statusEl = document.getElementById("bookingsStatus");
   statusEl.textContent = "載入中…";
@@ -435,7 +452,7 @@ function renderTable(keyword = "") {
       <td>${booking.note  || ""}</td>
     `;
 
-    // 狀態
+    /* 狀態欄位 */
     const tdStatus = document.createElement("td");
     const statusSel = document.createElement("select");
     statusSel.className = "status-select";
@@ -453,7 +470,9 @@ function renderTable(keyword = "") {
       try {
         await updateBookingStatus(booking.id, newStatus);
         booking.status = newStatus;
-        // 這裡如果想要同步刷新 iframe 日曆，可額外呼叫 reloadRoomCalendar()
+
+        // ✅ 狀態變動後，同步更新房況日曆
+        reloadRoomCalendar();
       } catch (e) {
         console.error(e);
         alert("更新狀態失敗，請稍後再試");
@@ -463,7 +482,7 @@ function renderTable(keyword = "") {
     tdStatus.appendChild(statusSel);
     tr.appendChild(tdStatus);
 
-    // 收款
+    /* 收款欄位 */
     const tdPay = document.createElement("td");
     const paySel = document.createElement("select");
     paySel.className = "payment-select";
@@ -490,7 +509,7 @@ function renderTable(keyword = "") {
     tdPay.appendChild(paySel);
     tr.appendChild(tdPay);
 
-    // 管理（修改）
+    /* 管理（修改） */
     const tdManage = document.createElement("td");
     const btnEdit = document.createElement("button");
     btnEdit.className = "btn btn-edit";
@@ -503,7 +522,7 @@ function renderTable(keyword = "") {
   });
 }
 
-/* 打開修改視窗 */
+/* 開啟修改視窗 */
 function openEditModal(booking) {
   editingBooking = booking;
   document.getElementById("editName").value    = booking.name  || "";
@@ -552,7 +571,7 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   const oldHouse   = editingBooking.house;
   const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
 
-  // ✅ 先問後端：該館別該年月有哪些日期是滿房
+  // 先問後端：該館別該年月有哪些日期是滿房
   try {
     const d = new Date(newDateStr);
     const y = d.getFullYear();
@@ -602,6 +621,8 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     closeEditModal();
     renderTable(document.getElementById("keyword").value);
 
+    // ✅ 有可能改了日期 / 館別 → 房況也要更新
+    reloadRoomCalendar();
   } catch (err) {
     console.error(err);
     alert("更新訂單資料失敗，請稍後再試");
