@@ -9,97 +9,97 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
-    body {
-        font-family: Arial, "Microsoft JhengHei";
-        background: #f2f2f2;
-        margin: 0;
-        padding: 0;
-    }
+  body {
+    font-family: Arial, "Microsoft JhengHei", sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 0;
+  }
 
-    header {
-        background: #06c755;
-        color: white;
-        padding: 16px;
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-    }
+  header {
+    background: #06c755;
+    color: white;
+    padding: 16px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+  }
 
-    .container {
-        padding: 20px;
-        max-width: 560px;
-        margin: 0 auto;
-    }
+  .container {
+    padding: 20px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
 
-    .loading {
-        font-size: 18px;
-        text-align: center;
-        padding: 20px 0;
-        color: #666;
-    }
+  .loading {
+    font-size: 18px;
+    text-align: center;
+    padding: 20px 0;
+    color: #666;
+  }
 
-    .result-box {
-        margin-top: 10px;
-        padding: 0;
-        border-radius: 12px;
-        display: none;
-    }
+  .result-box {
+    margin-top: 10px;
+    padding: 0;
+    border-radius: 12px;
+    display: none;
+  }
 
-    .record {
-        padding: 14px 16px;
-        font-size: 16px;
-        background: #ffffff;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
+  .record {
+    padding: 14px 16px;
+    font-size: 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
 
-    .record:last-child {
-        margin-bottom: 0;
-    }
+  .record:last-child {
+    margin-bottom: 0;
+  }
 
-    .record-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+  .record-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-    .record-table th {
-        text-align: left;
-        padding: 4px 6px;
-        width: 90px;          /* 左欄寬度 */
-        white-space: nowrap;
-        vertical-align: top;
-        font-weight: 700;
-    }
+  .record-table th {
+    text-align: left;
+    padding: 4px 6px;
+    width: 90px;
+    white-space: nowrap;
+    vertical-align: top;
+    font-weight: 700;
+  }
 
-    .record-table td {
-        padding: 4px 6px;
-        word-break: break-all;
-    }
+  .record-table td {
+    padding: 4px 6px;
+    word-break: break-all;
+  }
 
-    .status-text {
-        color: #d32f2f;       /* 狀態：紅色 */
-        font-weight: 700;
-    }
+  .status-label {
+    font-weight: 700;
+    color: #d32f2f;
+  }
 
-    .payment-text {
-        color: #1976d2;       /* 收款：藍色 */
-        font-weight: 600;
-    }
+  .payment-label {
+    font-weight: 700;
+    color: #1976d2;
+  }
 
-    .none {
-        color: red;
-        font-size: 18px;
-        padding: 20px 0;
-        text-align: center;
-    }
+  .none {
+    color: red;
+    font-size: 18px;
+    padding: 20px 0;
+    text-align: center;
+  }
 
-    .error {
-        color: #d32f2f;
-        font-size: 16px;
-        padding: 20px 0;
-        text-align: center;
-    }
+  .error {
+    color: #d32f2f;
+    font-size: 16px;
+    padding: 20px 0;
+    text-align: center;
+  }
 </style>
 </head>
 
@@ -108,16 +108,16 @@
 <header>靖寬靖廣 — 訂房查詢</header>
 
 <div class="container">
-    <div id="status" class="loading">系統正在查詢您的訂房紀錄，請稍候…</div>
-    <div id="resultBox" class="result-box"></div>
+  <div id="status" class="loading">系統正在查詢您的訂房紀錄，請稍候…</div>
+  <div id="resultBox" class="result-box"></div>
 </div>
 
 <script>
-// ★ GAS API（後端已支援用 uid 查詢，且回傳 status / payment）
+// ★ 請改成你現在 Script 的 URL（跟 admin / room-calendar 同一個）
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-// ★ 你的 LIFF ID
+// ★ LIFF ID（與預訂表單同一個專案）
 const LIFF_ID = "2008409020-Way8kzM7";
 
 /* 將時間字串轉成「YYYY-MM-DD HH:mm」 */
@@ -125,7 +125,6 @@ function formatDateTime(value) {
   if (!value) return "";
   const d = new Date(value);
   if (isNaN(d.getTime())) {
-    // 解析失敗就直接顯示原始字串，避免空白
     return String(value);
   }
   const y  = d.getFullYear();
@@ -136,7 +135,21 @@ function formatDateTime(value) {
   return `${y}-${m}-${dd} ${hh}:${mm}`;
 }
 
-/* 入口：初始化 LIFF 並查詢訂房紀錄 */
+/* 只顯示日期 YYYY-MM-DD */
+function formatDateOnly(value) {
+  if (!value) return "";
+  let s = String(value);
+  if (s.indexOf("T") >= 0) s = s.split("T")[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+/* 初始化 LIFF 並查詢訂房紀錄 */
 document.addEventListener("DOMContentLoaded", () => {
   initLiffAndSearch();
 });
@@ -146,17 +159,14 @@ async function initLiffAndSearch() {
   const resultBox = document.getElementById("resultBox");
 
   try {
-    // 1. 初始化 LIFF
     await liff.init({ liffId: LIFF_ID });
 
-    // 2. 如果不在 LINE App 內，就不要嘗試登入，直接提示
     if (!liff.isInClient()) {
       statusEl.textContent = "請從 LINE 官方帳號的圖文選單開啟本頁面。";
       statusEl.className = "error";
       return;
     }
 
-    // 3. 在 LINE 內 → 直接取得使用者 profile → userId
     let profile;
     try {
       profile = await liff.getProfile();
@@ -176,7 +186,6 @@ async function initLiffAndSearch() {
       return;
     }
 
-    // 4. 呼叫 GAS，用 uid 查詢訂房紀錄
     statusEl.textContent = "正在讀取您的訂房紀錄…";
 
     const res = await fetch(API_URL + "?uid=" + encodeURIComponent(uid));
@@ -189,20 +198,17 @@ async function initLiffAndSearch() {
     statusEl.style.display = "none";
     resultBox.style.display = "block";
 
-    // 5. 沒有紀錄
     if (!Array.isArray(data) || data.length === 0) {
       resultBox.innerHTML = "<div class='none'>目前查無您的訂房紀錄</div>";
       return;
     }
 
-    // 6. 有紀錄 → 顯示
-    // 欄位對應 GAS：time / uid / email / name / phone / house / date / days / adult / child / pet / note / status / payment
     let html = "";
     data.forEach(d => {
-      const createdText = formatDateTime(d.time); // 建立時間
-      const checkinText = formatDateTime(d.date); // 入住日
+      const createdText = formatDateTime(d.time);      // 建立時間
+      const checkinText = formatDateOnly(d.date);      // 入住日
       const statusText  = d.status  || "待確認";
-      const paymentText = d.payment || "未收款";
+      const payText     = d.payment || "未收款";
 
       html += `
         <div class="record">
@@ -246,11 +252,11 @@ async function initLiffAndSearch() {
               </tr>
               <tr>
                 <th>狀態</th>
-                <td><span class="status-text">${statusText}</span></td>
+                <td><span class="status-label">${statusText}</span></td>
               </tr>
               <tr>
                 <th>收款</th>
-                <td><span class="payment-text">${paymentText}</span></td>
+                <td><span class="payment-label">${payText}</span></td>
               </tr>
               <tr>
                 <th>備註</th>
