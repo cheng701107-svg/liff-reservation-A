@@ -214,6 +214,7 @@
 
 <div class="wrapper">
 
+  <!-- 搜尋 -->
   <section class="section">
     <h2>🔍 搜尋訂房資料</h2>
     <div class="search-row">
@@ -228,6 +229,7 @@
     <div id="bookingsStatus" class="loading">載入中…</div>
   </section>
 
+  <!-- 訂房清單 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
     <div style="overflow-x:auto;">
@@ -253,6 +255,7 @@
     </div>
   </section>
 
+  <!-- 房況日曆 -->
   <section class="section">
     <h2>🏡 房況管理</h2>
     <iframe
@@ -325,7 +328,7 @@ const ADMIN_KEY = "admin2025";
 let allBookings = [];
 let editingBooking = null;
 
-/* ===== 共用小工具 ===== */
+/* ========= 共用工具 ========= */
 
 function normalizeDateString(v) {
   if (!v) return "";
@@ -334,7 +337,7 @@ function normalizeDateString(v) {
   return s.trim();
 }
 
-// 一律輸出成 YYYY-MM-DD，無論原本是 Date / 2025-02-01 / 2025/2/1
+// 統一成 YYYY-MM-DD
 function formatDateOnly(value) {
   if (!value) return "";
 
@@ -374,27 +377,15 @@ function formatDateOnly(value) {
   return s;
 }
 
-/* 重新整理 iframe 裡的房況日曆 */
+/* 重新整理 iframe 房況日曆（不用依賴裡面的 JS function） */
 function reloadRoomCalendar() {
   const iframe = document.querySelector(".room-calendar-frame");
   if (!iframe) return;
-
-  try {
-    const win = iframe.contentWindow;
-    if (win && typeof win.loadCalendar === "function") {
-      // 若 room-calendar.html 有定義全域 loadCalendar
-      win.loadCalendar(true);
-    } else {
-      // 否則直接重載 iframe（加時間戳避免 cache）
-      const baseSrc = iframe.src.split("#")[0].split("?")[0];
-      iframe.src = baseSrc + "?t=" + Date.now();
-    }
-  } catch (e) {
-    console.warn("重新載入房況日曆失敗：", e);
-  }
+  const baseSrc = iframe.src.split("#")[0].split("?")[0];
+  iframe.src = baseSrc + "?t=" + Date.now();  // 加時間戳避免 cache
 }
 
-/* ===== 從後端抓全部訂單 ===== */
+/* ========= 從後端抓全部訂單 ========= */
 async function loadBookings() {
   const statusEl = document.getElementById("bookingsStatus");
   statusEl.textContent = "載入中…";
@@ -420,7 +411,7 @@ async function loadBookings() {
   }
 }
 
-/* 依關鍵字過濾並畫出表格 */
+/* ========= 畫訂房清單 ========= */
 function renderTable(keyword = "") {
   const tbody = document.getElementById("bookingBody");
   tbody.innerHTML = "";
@@ -452,7 +443,7 @@ function renderTable(keyword = "") {
       <td>${booking.note  || ""}</td>
     `;
 
-    /* 狀態欄位 */
+    /* ==== 狀態欄位（會連動房況日曆） ==== */
     const tdStatus = document.createElement("td");
     const statusSel = document.createElement("select");
     statusSel.className = "status-select";
@@ -464,25 +455,33 @@ function renderTable(keyword = "") {
     });
     const currentStatus = booking.status || "待確認";
     statusSel.value = currentStatus;
+
     statusSel.addEventListener("change", async () => {
       const newStatus = statusSel.value;
       const oldStatus = booking.status || "待確認";
+
       try {
+        // 1) 更新訂單狀態（Bookings）
         await updateBookingStatus(booking.id, newStatus);
         booking.status = newStatus;
 
-        // ✅ 狀態變動後，同步更新房況日曆
+        // 2) 同步更新房況表（房況管理 sheet）
+        await updateRoomStatusByStatus(booking, newStatus);
+
+        // 3) 重新載入日曆
         reloadRoomCalendar();
+
       } catch (e) {
         console.error(e);
         alert("更新狀態失敗，請稍後再試");
         statusSel.value = oldStatus;
       }
     });
+
     tdStatus.appendChild(statusSel);
     tr.appendChild(tdStatus);
 
-    /* 收款欄位 */
+    /* ==== 收款欄位 ==== */
     const tdPay = document.createElement("td");
     const paySel = document.createElement("select");
     paySel.className = "payment-select";
@@ -494,6 +493,7 @@ function renderTable(keyword = "") {
     });
     const currentPay = booking.payment || "未收款";
     paySel.value = currentPay;
+
     paySel.addEventListener("change", async () => {
       const newPay = paySel.value;
       const oldPay = booking.payment || "未收款";
@@ -509,7 +509,7 @@ function renderTable(keyword = "") {
     tdPay.appendChild(paySel);
     tr.appendChild(tdPay);
 
-    /* 管理（修改） */
+    /* ==== 管理（修改） ==== */
     const tdManage = document.createElement("td");
     const btnEdit = document.createElement("button");
     btnEdit.className = "btn btn-edit";
@@ -522,7 +522,45 @@ function renderTable(keyword = "") {
   });
 }
 
-/* 開啟修改視窗 */
+/* ========= 狀態 → 房況表（updateRoomStatus） ========= */
+async function updateRoomStatusByStatus(booking, newStatus) {
+  const house = booking.house;
+  const dateStr = formatDateOnly(booking.date);
+  if (!house || !dateStr) return;
+
+  let statusCell = "";
+  if (newStatus === "已訂房" || newStatus === "已入住") {
+    statusCell = "滿";       // 滿房
+  } else if (newStatus === "待確認" || newStatus === "已取消") {
+    statusCell = "";         // 清空 → 視為可售
+  } else {
+    return;
+  }
+
+  const payload = {
+    action: "updateRoomStatus",
+    admin_key: ADMIN_KEY,
+    house,
+    date: dateStr,
+    status: statusCell
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  try {
+    const json = await res.json();
+    if (!json.success) {
+      console.error("updateRoomStatus 失敗：", json);
+    }
+  } catch (e) {
+    console.warn("updateRoomStatus 回傳非 JSON", e);
+  }
+}
+
+/* ========= 修改訂單（Modal） ========= */
 function openEditModal(booking) {
   editingBooking = booking;
   document.getElementById("editName").value    = booking.name  || "";
@@ -545,7 +583,7 @@ function closeEditModal() {
 
 document.getElementById("editCancelBtn").addEventListener("click", closeEditModal);
 
-/* 儲存修改：先檢查滿房，再真的送 update */
+/* 儲存修改：先檢查是否選到「已滿房」日期，再送 update */
 document.getElementById("editForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!editingBooking) return;
@@ -571,19 +609,15 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   const oldHouse   = editingBooking.house;
   const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
 
-  // 先問後端：該館別該年月有哪些日期是滿房
+  // ① 先用 getRoomStatus 查該館別哪些日期是「已滿」
   try {
-    const d = new Date(newDateStr);
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const url = `${API_URL}?action=getCalendar&house=${
-      encodeURIComponent(newHouse)
-    }&year=${y}&month=${m}&ts=${Date.now()}`;
-
+    const url = `${API_URL}?action=getRoomStatus&ts=${Date.now()}`;
     const res = await fetch(url);
-    const data = await res.json();
-    const fullDates = (data.fullDates || []).map(normalizeDateString);
+    const data = await res.json(); // { "A館": [...], "B館": [...] }
 
+    const fullDates = (data[newHouse] || []).map(normalizeDateString);
+
+    // 選到別人的滿房 → 不給改
     if (fullDates.includes(newDateStr) && !isSameAsOriginal) {
       alert(`「${newHouse}」在 ${newDateStr} 已滿房，請改選其他日期。`);
       return;
@@ -594,6 +628,7 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     return;
   }
 
+  // ② 真正更新訂單內容
   try {
     await updateBookingFields(editingBooking.id, {
       name:  newName,
@@ -608,6 +643,9 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     });
 
     // 前端資料同步
+    const oldDateForRoom = formatDateOnly(editingBooking.date);
+    const oldHouseForRoom = editingBooking.house;
+
     editingBooking.name  = newName;
     editingBooking.phone = newPhone;
     editingBooking.date  = newDateStr;
@@ -618,18 +656,30 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     editingBooking.pet   = newPet;
     editingBooking.note  = newNote;
 
+    // ③ 如果這筆訂單目前狀態是「已訂房 / 已入住」，
+    //    代表它會決定房況 → 要把舊日期清空、新日期設為滿房
+    if (editingBooking.status === "已訂房" || editingBooking.status === "已入住") {
+      // 清掉舊日期
+      if (oldDateForRoom && oldHouseForRoom) {
+        await postUpdateRoomStatus(oldHouseForRoom, oldDateForRoom, "");
+      }
+      // 標記新日期滿房
+      if (newDateStr && newHouse) {
+        await postUpdateRoomStatus(newHouse, newDateStr, "滿");
+      }
+      reloadRoomCalendar();
+    }
+
     closeEditModal();
     renderTable(document.getElementById("keyword").value);
 
-    // ✅ 有可能改了日期 / 館別 → 房況也要更新
-    reloadRoomCalendar();
   } catch (err) {
     console.error(err);
     alert("更新訂單資料失敗，請稍後再試");
   }
 });
 
-/* 後端：update 整筆訂單 */
+/* ========= 呼叫 GAS：update 整筆訂單 ========= */
 async function updateBookingFields(id, newData) {
   const payload = {
     action: "update",
@@ -656,7 +706,7 @@ async function updateBookingFields(id, newData) {
   }
 }
 
-/* 後端：update 狀態 */
+/* ========= 呼叫 GAS：update 狀態 ========= */
 async function updateBookingStatus(id, newStatus) {
   const payload = {
     action: "updateStatus",
@@ -675,7 +725,7 @@ async function updateBookingStatus(id, newStatus) {
   }
 }
 
-/* 後端：update 收款 */
+/* ========= 呼叫 GAS：update 收款 ========= */
 async function updateBookingPayment(id, newPayment) {
   const payload = {
     action: "updatePayment",
@@ -694,7 +744,34 @@ async function updateBookingPayment(id, newPayment) {
   }
 }
 
-/* 搜尋按鈕 */
+/* ========= 呼叫 GAS：直接更新房況表 ========= */
+async function postUpdateRoomStatus(house, dateStr, statusCell) {
+  if (!house || !dateStr) return;
+
+  const payload = {
+    action: "updateRoomStatus",
+    admin_key: ADMIN_KEY,
+    house,
+    date: dateStr,
+    status: statusCell   // "滿" 或 ""
+  };
+
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  try {
+    const json = await res.json();
+    if (!json.success) {
+      console.error("updateRoomStatus 失敗：", json);
+    }
+  } catch (e) {
+    console.warn("updateRoomStatus 回傳非 JSON", e);
+  }
+}
+
+/* ========= 搜尋 ========= */
 document.getElementById("btnSearch").addEventListener("click", () => {
   const kw = document.getElementById("keyword").value;
   renderTable(kw);
@@ -705,7 +782,7 @@ document.getElementById("btnClear").addEventListener("click", () => {
   renderTable("");
 });
 
-/* 啟動 */
+/* ========= 啟動 ========= */
 loadBookings();
 </script>
 
