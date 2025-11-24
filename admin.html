@@ -320,7 +320,7 @@
 
 <script>
 const API_URL   =
- "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec"; // 換成最新部署的 URL
 const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
@@ -374,26 +374,25 @@ function formatDateOnly(value) {
 /* 從後端抓全部訂房資料 */
 async function loadBookings() {
   const statusEl = document.getElementById("bookingsStatus");
-  statusEl.className = "loading";
   statusEl.textContent = "載入中…";
 
   try {
     const res = await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({
-        action: "getAllBookings",   // GAS 會走 getAllBookings()
+        action: "getAll",        // GAS 會走到 getAllBookings()
         admin_key: ADMIN_KEY
       })
     });
 
-    const json = await res.json();
-    console.log("getAllBookings 回傳", json);
+    const data = await res.json();
+    console.log("getAll 回傳", data);
 
-    if (!json.success) {
-      throw new Error(json.error || "API 回傳失敗");
+    if (!data.success) {
+      throw new Error(data.error || "API 回傳失敗");
     }
 
-    allBookings = Array.isArray(json.bookings) ? json.bookings : [];
+    allBookings = Array.isArray(data.bookings) ? data.bookings : [];
     statusEl.textContent = `共 ${allBookings.length} 筆訂房資料`;
 
     renderTable();
@@ -554,7 +553,6 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   const oldHouse   = editingBooking.house;
   const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
 
-  // 先查該月日曆，看新日期是否已滿房（且不是原本那一天）
   try {
     const d = new Date(newDateStr);
     const y = d.getFullYear();
