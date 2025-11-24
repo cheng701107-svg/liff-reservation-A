@@ -5,7 +5,6 @@
 <title>靖寬靖廣 — 線上預訂</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- LIFF SDK -->
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
@@ -17,7 +16,7 @@
   .field { margin-bottom:12px; }
   .field label { display:block; margin-bottom:4px; font-size:14px; font-weight:700; }
   input, select, textarea {
-    width:100%; box-sizing:border-box; padding:8px 10px; font-size:14px;
+    width:100%; box-sizing:border-box; padding:8px 10px; font-size:14px; 
     border-radius:8px; border:1px solid #ccc;
   }
   textarea { resize:vertical; min-height:60px; }
@@ -43,24 +42,24 @@
   <div class="card">
     <h2>請填寫預訂資訊</h2>
     <div id="statusLine" class="status-line">正在連線 LINE 帳號…</div>
+
     <form id="bookingForm">
-      <input type="hidden" id="uid" />
-      <input type="hidden" id="email" />
+      <input type="hidden" id="uid" name="uid" />
+      <input type="hidden" id="email" name="email" />
 
       <div class="field" id="nameField">
-  <label>姓名（必填）</label>
-  <input id="name" name="name" type="text" required />
-</div>
-
+        <label>姓名（必填）</label>
+        <input id="name" name="name" type="text" required />
+      </div>
 
       <div class="field">
         <label>手機（必填）</label>
-        <input id="phone" name="phone "type="tel" maxlength="10" placeholder="0912345678" required />
+        <input id="phone" name="phone" type="tel" maxlength="10" placeholder="0912345678" required />
       </div>
 
       <div class="field">
         <label>館別</label>
-        <select id="house">
+        <select id="house" name="house">
           <option value="A館">A館</option>
           <option value="B館">B館</option>
         </select>
@@ -68,33 +67,33 @@
 
       <div class="field">
         <label>入住日</label>
-        <input id="date" name="date "type="date" required />
+        <input id="date" name="date" type="date" required />
         <div id="availabilityHint" class="availability"></div>
       </div>
 
       <div class="field">
         <label>住宿天數</label>
-        <input id="nights" type="number" min="1" value="1" />
+        <input id="nights" name="nights" type="number" min="1" value="1" />
       </div>
 
       <div class="field">
         <label>大人數</label>
-        <input id="adult" type="number" min="1" value="2" />
+        <input id="adult" name="adult" type="number" min="1" value="2" />
       </div>
 
       <div class="field">
         <label>小孩數</label>
-        <input id="child" type="number" min="0" value="0" />
+        <input id="child" name="child" type="number" min="0" value="0" />
       </div>
 
       <div class="field">
         <label>寵物</label>
-        <input id="pet" type="text" placeholder="例如：無 / 1 隻狗" />
+        <input id="pet" name="pet" type="text" placeholder="例如：無 / 1 隻狗" />
       </div>
 
       <div class="field">
         <label>備註</label>
-        <textarea id="note"></textarea>
+        <textarea id="note" name="note"></textarea>
       </div>
 
       <button id="submitBtn" class="btn-submit" disabled>
@@ -108,6 +107,23 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwyDvx82gKgUUcyP-Ke7KJw1wVA2thbiGjhb0IO1-NbEUO5CqnXaz--SPSKEYUUB5tj/exec";
 const LIFF_ID = "2008409020-k4Oy7Y0D";
 
+/* DOM 快取 */
+const uidInput     = document.getElementById("uid");
+const emailInput   = document.getElementById("email");
+const nameInput    = document.getElementById("name");
+const phoneInput   = document.getElementById("phone");
+const houseInput   = document.getElementById("house");
+const dateInput    = document.getElementById("date");
+const nightsInput  = document.getElementById("nights");
+const adultInput   = document.getElementById("adult");
+const childInput   = document.getElementById("child");
+const petInput     = document.getElementById("pet");
+const noteInput    = document.getElementById("note");
+const nameField    = document.getElementById("nameField");
+const availabilityHint = document.getElementById("availabilityHint");
+const submitBtn        = document.getElementById("submitBtn");
+const statusLine       = document.getElementById("statusLine");
+
 /* -------------------- 初始化 -------------------- */
 document.addEventListener("DOMContentLoaded", () => {
   setMinDate();
@@ -115,11 +131,13 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
 });
 
+/* 最小入住日 = 今天 */
 function setMinDate() {
   const t = new Date();
+  const y = t.getFullYear();
   const m = String(t.getMonth() + 1).padStart(2, "0");
   const d = String(t.getDate()).padStart(2, "0");
-  date.min = `${t.getFullYear()}-${m}-${d}`;
+  dateInput.min = `${y}-${m}-${d}`;
 }
 
 /* -------------------- LIFF 初始化 -------------------- */
@@ -127,48 +145,47 @@ async function initLiff() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
-    const profile = await liff.getProfile();
-    uid.value = profile.userId;
+    let profile = await liff.getProfile();
+    uidInput.value = profile.userId;
 
-    name.value = profile.displayName;
+    nameInput.value = profile.displayName;
     nameField.style.display = "none";
 
     const decoded = liff.getDecodedIDToken();
-    email.value = decoded?.email || "";
+    emailInput.value = decoded?.email || "";
 
     statusLine.innerHTML = `已從 LINE 開啟，<strong>${profile.displayName}</strong> 您好`;
-
-  } catch {
-    statusLine.textContent = "⚠️ 無法取得 LINE 帳號（仍可預訂）";
+  } catch (err) {
+    statusLine.textContent = "⚠ 無法取得 LINE 帳號（仍可預訂）";
   }
   submitBtn.disabled = false;
 }
 
 /* -------------------- 綁定事件 -------------------- */
 function bindEvents() {
-  house.addEventListener("change", checkRoom);
-  date.addEventListener("change", checkRoom);
-  nights.addEventListener("input", checkRoom);
-  bookingForm.addEventListener("submit", onSubmit);
+  houseInput.addEventListener("change", checkRoom);
+  dateInput.addEventListener("change", checkRoom);
+  nightsInput.addEventListener("input", checkRoom);
+  document.getElementById("bookingForm").addEventListener("submit", onSubmit);
 }
 
 /* -------------------- 查房況 -------------------- */
 async function checkRoom() {
-  if (!date.value) return;
+  if (!dateInput.value) return;
 
-  const d = new Date(date.value);
+  const d = new Date(dateInput.value);
   const year = d.getFullYear();
   const month = d.getMonth() + 1;
 
   try {
-    const res = await fetch(`${API_URL}?action=getCalendar&house=${house.value}&year=${year}&month=${month}`);
+    const res = await fetch(`${API_URL}?action=getCalendar&house=${houseInput.value}&year=${year}&month=${month}`);
     const json = await res.json();
 
     const full = json.fullDates || [];
     let conflict = false;
 
-    for (let i = 0; i < nights.value; i++) {
-      const dt = new Date(date.value);
+    for (let i = 0; i < nightsInput.value; i++) {
+      const dt = new Date(dateInput.value);
       dt.setDate(dt.getDate() + i);
       if (full.includes(dt.toISOString().split("T")[0])) conflict = true;
     }
@@ -187,21 +204,13 @@ async function checkRoom() {
     availabilityHint.textContent = "無法查詢房況（仍可預訂）";
   }
 }
-/* -------------------- 送出預訂（模式 B：跳轉 resultSend.html） -------------------- */
+
+/* -------------------- 提交（模式 B → 跳轉 resultSend.html） -------------------- */
 async function onSubmit(e) {
   e.preventDefault();
 
-  const name   = document.getElementById("name").value.trim();
-  const phone  = document.getElementById("phone").value.trim();
-  const house  = document.getElementById("house").value;
-  const date   = document.getElementById("date").value;
-  const nights = Number(document.getElementById("nights").value);
-  const adult  = document.getElementById("adult").value;
-  const child  = document.getElementById("child").value;
-  const pet    = document.getElementById("pet").value.trim();
-  const note   = document.getElementById("note").value.trim();
-  const uid    = document.getElementById("uid").value;
-  const email  = document.getElementById("email").value;
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
 
   if (!/^09\d{8}$/.test(phone)) {
     alert("手機格式必須為 09xxxxxxxx");
@@ -213,8 +222,16 @@ async function onSubmit(e) {
 
   const payload = {
     action: "createBooking",
-    uid, name, phone, email,
-    house, date, nights, adult, child, pet, note
+    uid: uidInput.value,
+    name, phone,
+    email: emailInput.value,
+    house: houseInput.value,
+    date: dateInput.value,
+    nights: nightsInput.value,
+    adult: adultInput.value,
+    child: childInput.value,
+    pet: petInput.value,
+    note: noteInput.value
   };
 
   try {
@@ -226,17 +243,17 @@ async function onSubmit(e) {
     const json = await res.json();
     if (!json.success) throw new Error(json.error);
 
-    location.href =
-      `resultSend.html?id=${json.id}` +
-      `&name=${encodeURIComponent(name)}` +
-      `&phone=${encodeURIComponent(phone)}` +
-      `&house=${encodeURIComponent(house)}` +
-      `&date=${encodeURIComponent(date)}` +
-      `&nights=${encodeURIComponent(nights)}` +
-      `&adult=${encodeURIComponent(adult)}` +
-      `&child=${encodeURIComponent(child)}` +
-      `&pet=${encodeURIComponent(pet)}` +
-      `&note=${encodeURIComponent(note)}`;
+    /* 跳轉至 resultSend.html */
+    location.href = `resultSend.html?id=${json.id}`
+                  + `&name=${encodeURIComponent(name)}`
+                  + `&phone=${encodeURIComponent(phone)}`
+                  + `&house=${encodeURIComponent(houseInput.value)}`
+                  + `&date=${encodeURIComponent(dateInput.value)}`
+                  + `&nights=${encodeURIComponent(nightsInput.value)}`
+                  + `&adult=${encodeURIComponent(adultInput.value)}`
+                  + `&child=${encodeURIComponent(childInput.value)}`
+                  + `&pet=${encodeURIComponent(petInput.value)}`
+                  + `&note=${encodeURIComponent(noteInput.value)}`;
 
   } catch (err) {
     alert("預訂成功，但傳送摘要失敗：" + err.message);
@@ -245,12 +262,7 @@ async function onSubmit(e) {
     submitBtn.textContent = "送出預訂";
   }
 }
-
 </script>
 
 </body>
 </html>
-
-
-
-
