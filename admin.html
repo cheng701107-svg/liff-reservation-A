@@ -537,27 +537,7 @@ async function updateRoomStatusByStatus(booking, newStatus) {
     return;
   }
 
-  const payload = {
-    action: "updateRoomStatus",
-    admin_key: ADMIN_KEY,
-    house,
-    date: dateStr,
-    status: statusCell
-  };
-
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-
-  try {
-    const json = await res.json();
-    if (!json.success) {
-      console.error("updateRoomStatus 失敗：", json);
-    }
-  } catch (e) {
-    console.warn("updateRoomStatus 回傳非 JSON", e);
-  }
+  await postUpdateRoomStatus(house, dateStr, statusCell);
 }
 
 /* ========= 修改訂單（Modal） ========= */
@@ -583,7 +563,7 @@ function closeEditModal() {
 
 document.getElementById("editCancelBtn").addEventListener("click", closeEditModal);
 
-/* 儲存修改：先檢查是否選到「已滿房」日期，再送 update */
+/* 儲存修改：有房況 API 就擋滿房，沒有就直接放行（不再跳錯） */
 document.getElementById("editForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!editingBooking) return;
@@ -609,23 +589,23 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
   const oldHouse   = editingBooking.house;
   const isSameAsOriginal = (newDateStr === oldDateStr && newHouse === oldHouse);
 
-  // ① 先用 getRoomStatus 查該館別哪些日期是「已滿」
+  // ① 先試著用 getRoomStatus 檢查滿房（失敗就略過，不再 alert 阻擋）
   try {
     const url = `${API_URL}?action=getRoomStatus&ts=${Date.now()}`;
     const res = await fetch(url);
-    const data = await res.json(); // { "A館": [...], "B館": [...] }
-
-    const fullDates = (data[newHouse] || []).map(normalizeDateString);
-
-    // 選到別人的滿房 → 不給改
-    if (fullDates.includes(newDateStr) && !isSameAsOriginal) {
-      alert(`「${newHouse}」在 ${newDateStr} 已滿房，請改選其他日期。`);
-      return;
+    if (res.ok) {
+      const data = await res.json(); // { "A館": [...], "B館": [...] }
+      const fullDates = (data[newHouse] || []).map(normalizeDateString);
+      if (fullDates.includes(newDateStr) && !isSameAsOriginal) {
+        alert(`「${newHouse}」在 ${newDateStr} 已滿房，請改選其他日期。`);
+        return;
+      }
+    } else {
+      console.warn("getRoomStatus HTTP error:", res.status);
     }
   } catch (err) {
-    console.error(err);
-    alert("檢查房況失敗，請稍後再試。");
-    return;
+    console.warn("檢查房況失敗（僅記錄，不擋存檔）", err);
+    // 不再 alert，不擋存檔
   }
 
   // ② 真正更新訂單內容
@@ -642,8 +622,7 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
       note:  newNote
     });
 
-    // 前端資料同步
-    const oldDateForRoom = formatDateOnly(editingBooking.date);
+    const oldDateForRoom  = formatDateOnly(editingBooking.date);
     const oldHouseForRoom = editingBooking.house;
 
     editingBooking.name  = newName;
@@ -656,14 +635,11 @@ document.getElementById("editForm").addEventListener("submit", async (e) => {
     editingBooking.pet   = newPet;
     editingBooking.note  = newNote;
 
-    // ③ 如果這筆訂單目前狀態是「已訂房 / 已入住」，
-    //    代表它會決定房況 → 要把舊日期清空、新日期設為滿房
+    // ③ 如果這筆狀態是「已訂房 / 已入住」，等於這一筆會吃掉房況
     if (editingBooking.status === "已訂房" || editingBooking.status === "已入住") {
-      // 清掉舊日期
       if (oldDateForRoom && oldHouseForRoom) {
         await postUpdateRoomStatus(oldHouseForRoom, oldDateForRoom, "");
       }
-      // 標記新日期滿房
       if (newDateStr && newHouse) {
         await postUpdateRoomStatus(newHouse, newDateStr, "滿");
       }
@@ -761,13 +737,16 @@ async function postUpdateRoomStatus(house, dateStr, statusCell) {
     body: JSON.stringify(payload)
   });
 
+  let json = null;
   try {
-    const json = await res.json();
-    if (!json.success) {
-      console.error("updateRoomStatus 失敗：", json);
-    }
+    json = await res.json();
   } catch (e) {
     console.warn("updateRoomStatus 回傳非 JSON", e);
+    return;
+  }
+
+  if (!json.success) {
+    console.error("updateRoomStatus 失敗：", json);
   }
 }
 
