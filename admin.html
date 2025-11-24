@@ -332,16 +332,49 @@ function normalizeDateString(v) {
   return s.trim();
 }
 
+// 一律輸出成 YYYY-MM-DD，無論原本是 Date / 2025-02-01 / 2025/2/1
 function formatDateOnly(value) {
-  const s = normalizeDateString(value);
-  if (!s) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
-  const y  = d.getFullYear();
-  const m  = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
+  if (!value) return "";
+
+  // 已經是 Date 物件
+  if (value instanceof Date) {
+    const y  = value.getFullYear();
+    const m  = String(value.getMonth() + 1).padStart(2, "0");
+    const d  = String(value.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const s = String(value).trim();
+
+  // 已經是 YYYY-MM-DD
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const y  = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
+  // YYYY/MM/DD 或 YYYY.MM.DD
+  m = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})$/);
+  if (m) {
+    const y  = m[1];
+    const mm = m[2].padStart(2, "0");
+    const dd = m[3].padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
+  // 最後再丟給 new Date 嘗試解析
+  const d2 = new Date(s);
+  if (!isNaN(d2.getTime())) {
+    const y2  = d2.getFullYear();
+    const m2  = String(d2.getMonth() + 1).padStart(2, "0");
+    const dd2 = String(d2.getDate()).padStart(2, "0");
+    return `${y2}-${m2}-${dd2}`;
+  }
+
+  // 實在解析不了，就原樣丟出去（至少不會噴錯）
+  return s;
 }
 
 /* 從後端抓全部訂單 */
