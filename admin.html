@@ -660,14 +660,22 @@ async function updateBookingPayment(id, newPayment) {
     payment: newPayment
   };
 
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error(json.error || "更新收款狀態失敗");
-  }
+ const res = await fetch(API_URL, {
+  method: "POST",
+  body: JSON.stringify({
+    action: "getAllBookings",   // 或 "getAll"，GAS 都會走 getAllBookings()
+    admin_key: ADMIN_KEY
+  })
+});
+
+const json = await res.json();
+console.log("getAllBookings 回傳", json);
+
+const list = Array.isArray(json) ? json : (json.bookings || []);
+allBookings = list;
+
+statusEl.textContent = `共 ${allBookings.length} 筆訂房資料`;
+
 }
 
 /* 讓日曆重抓資料 */
