@@ -30,76 +30,100 @@
     padding: 16px;
   }
 
-  .section {
+  .card {
     background: #ffffff;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 18px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }
 
   h2 {
-    margin-top: 0;
+    margin: 0 0 10px;
     font-size: 18px;
-    margin-bottom: 12px;
   }
 
   .field {
     margin-bottom: 12px;
   }
 
-  label {
+  .field label {
     display: block;
-    font-size: 14px;
     margin-bottom: 4px;
+    font-size: 14px;
+    font-weight: 700;
   }
 
-  input, select, textarea {
+  .field small {
+    display: block;
+    font-size: 12px;
+    color: #666;
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
     width: 100%;
     box-sizing: border-box;
     padding: 8px 10px;
-    font-size: 15px;
+    font-size: 14px;
     border-radius: 8px;
     border: 1px solid #ccc;
-    font-family: inherit;
   }
 
   textarea {
     resize: vertical;
+    min-height: 60px;
   }
 
-  .btn {
+  .btn-submit {
     width: 100%;
     padding: 12px;
-    font-size: 16px;
     border-radius: 999px;
     border: none;
-    cursor: pointer;
-    margin-top: 6px;
-  }
-
-  .btn-primary {
     background: #06c755;
-    color: #fff;
+    color: #ffffff;
+    font-size: 16px;
     font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
   }
 
-  .btn-primary:disabled {
-    opacity: 0.5;
+  .btn-submit:disabled {
+    background: #9e9e9e;
     cursor: not-allowed;
   }
 
-  .msg {
-    margin-top: 12px;
-    font-size: 14px;
-    text-align: center;
+  .hint {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
   }
 
-  .msg.ok {
+  .availability {
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  .availability.ok {
     color: #2e7d32;
   }
 
-  .msg.err {
+  .availability.full {
     color: #d32f2f;
+    font-weight: 700;
+  }
+
+  .status-line {
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #666;
+  }
+
+  .status-line strong {
+    color: #06c755;
   }
 </style>
 </head>
@@ -109,36 +133,36 @@
 <header>靖寬靖廣 — 線上預訂</header>
 
 <div class="container">
-  <div class="section">
-    <h2>請填寫預訂資料</h2>
+  <div class="card">
+    <h2>請填寫預訂資訊</h2>
+    <div id="statusLine" class="status-line">
+      系統正在初始化，請稍候…
+    </div>
 
     <form id="bookingForm">
-      <!-- 這兩個由 LIFF 自動填寫 -->
+      <!-- 隱藏欄位：LINE UID / email -->
       <input type="hidden" id="uid" />
       <input type="hidden" id="email" />
 
       <div class="field">
-        <label>姓名（必填）</label>
+        <label for="name">姓名（必填）</label>
         <input type="text" id="name" required />
       </div>
 
       <div class="field">
-        <label>手機（必填，09 開頭 10 碼）</label>
-        <input type="tel" id="phone" maxlength="10" required placeholder="0912345678" />
+        <label for="phone">手機（必填，10 碼）</label>
+        <input
+          type="tel"
+          id="phone"
+          maxlength="10"
+          placeholder="0912345678"
+          required
+        />
+        <small>請輸入 09 開頭的 10 碼手機號碼</small>
       </div>
 
       <div class="field">
-        <label>入住日（必填）</label>
-        <input type="date" id="date" required />
-      </div>
-
-      <div class="field">
-        <label>入住天數</label>
-        <input type="number" id="days" min="1" value="1" />
-      </div>
-
-      <div class="field">
-        <label>館別</label>
+        <label for="house">館別</label>
         <select id="house">
           <option value="A館">A館</option>
           <option value="B館">B館</option>
@@ -146,156 +170,298 @@
       </div>
 
       <div class="field">
-        <label>大人</label>
-        <input type="number" id="adult" min="1" value="2" />
+        <label for="date">入住日</label>
+        <input type="date" id="date" required />
+        <div id="availabilityHint" class="availability"></div>
       </div>
 
       <div class="field">
-        <label>小孩</label>
-        <input type="number" id="child" min="0" value="0" />
+        <label for="nights">住宿天數</label>
+        <input
+          type="number"
+          id="nights"
+          min="1"
+          value="1"
+          required
+        />
+        <small>若連續入住多晚，請輸入總晚數（例如住 2 晚就填 2）</small>
       </div>
 
       <div class="field">
-        <label>寵物（例如：無 / 1隻狗）</label>
-        <input type="text" id="pet" placeholder="無" />
+        <label for="adult">大人數量</label>
+        <input
+          type="number"
+          id="adult"
+          min="1"
+          value="2"
+          required
+        />
       </div>
 
       <div class="field">
-        <label>備註</label>
-        <textarea id="note" rows="3" placeholder="可填寫特殊需求 / 抵達時間等"></textarea>
+        <label for="child">小孩數量</label>
+        <input
+          type="number"
+          id="child"
+          min="0"
+          value="0"
+          required
+        />
       </div>
 
-      <button type="submit" class="btn btn-primary" id="btnSubmit">送出預訂</button>
-      <div id="msg" class="msg"></div>
+      <div class="field">
+        <label for="pet">寵物</label>
+        <input
+          type="text"
+          id="pet"
+          placeholder="例如：無 / 1 隻狗 / 2 隻貓"
+        />
+      </div>
+
+      <div class="field">
+        <label for="note">其他備註</label>
+        <textarea
+          id="note"
+          placeholder="可以填寫預計抵達時間、特殊需求…"
+        ></textarea>
+      </div>
+
+      <div class="hint">
+        ※ 此表單送出後，管家會再與您確認，狀態為「已訂房」後即完成預訂。
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn-submit" disabled>
+        送出預訂
+      </button>
     </form>
   </div>
 </div>
 
 <script>
-// ★ 請改成你現在 Script 的 URL（跟 admin / room-calendar 同一個）
+// ======== 請依實際情況修改這兩個常數 ========
+
+// ★ 新 Web App URL（如果你沿用原本部署，這串可維持不變）
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 
-// ★ LIFF ID（請用你實際的）
+// ★ 你的 LIFF ID
 const LIFF_ID = "2008409020-Way8kzM7";
 
-const ADMIN_KEY = "admin2025";
+// ============================================
 
-function showMsg(text, ok = false) {
-  const msgEl = document.getElementById("msg");
-  msgEl.textContent = text;
-  msgEl.className = "msg " + (ok ? "ok" : "err");
+const statusLine       = document.getElementById("statusLine");
+const submitBtn        = document.getElementById("submitBtn");
+const availabilityHint = document.getElementById("availabilityHint");
+
+let currentFullDatesCache = []; // 暫存當月滿房日，減少重複查詢
+
+// 把日期字串標準化成 YYYY-MM-DD
+function normalizeDateString(v) {
+  if (!v) return "";
+  let s = typeof v === "string" ? v : String(v);
+  if (s.indexOf("T") >= 0) s = s.split("T")[0];
+  return s.trim();
 }
 
-function setLoading(loading) {
-  const btn = document.getElementById("btnSubmit");
-  if (loading) {
-    btn.disabled = true;
-    btn.textContent = "送出中…";
-  } else {
-    btn.disabled = false;
-    btn.textContent = "送出預訂";
-  }
+// 設定入住日最小日期（今天）
+function setMinDate() {
+  const today = new Date();
+  const y  = today.getFullYear();
+  const m  = String(today.getMonth() + 1).padStart(2, "0");
+  const d  = String(today.getDate()).padStart(2, "0");
+  const minStr = `${y}-${m}-${d}`;
+  document.getElementById("date").setAttribute("min", minStr);
 }
 
-/* 初始化 LIFF，抓 uid & email */
-document.addEventListener("DOMContentLoaded", async () => {
+// 初始化 LIFF
+document.addEventListener("DOMContentLoaded", () => {
+  setMinDate();
+  initLiff();
+  bindFormEvents();
+});
+
+async function initLiff() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
-    if (!liff.isInClient()) {
-      showMsg("請從 LINE 官方帳號的圖文選單開啟本頁面。", false);
-      return;
+    if (liff.isInClient()) {
+      const profile = await liff.getProfile();
+      document.getElementById("uid").value = profile.userId || "";
+      statusLine.innerHTML = `已從 LINE 開啟 <br><strong>${profile.displayName}</strong> 您好，請填寫預訂資訊。`;
+    } else {
+      statusLine.innerHTML = "目前不是從 LINE App 開啟，此預訂將不會綁定 LINE 帳號。";
     }
 
-    const profile = await liff.getProfile();
-    const uid = profile.userId;
-    document.getElementById("uid").value = uid || "";
-
-    const context = liff.getDecodedIDToken();
-    const email = context && context.email ? context.email : "";
-    document.getElementById("email").value = email;
-
+    submitBtn.disabled = false;
   } catch (err) {
-    console.error(err);
-    showMsg("初始化失敗，請稍後再試。", false);
+    console.error("LIFF 初始化失敗：", err);
+    statusLine.textContent = "LIFF 初始化失敗，仍可嘗試填寫預訂，但將無法綁定 LINE 帳號。";
+    submitBtn.disabled = false;
   }
-});
+}
 
-/* 表單送出：呼叫 API 新增訂單 */
-document.getElementById("bookingForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  showMsg("");
+/** 綁定欄位事件：館別 / 入住日 / 天數 改變時，先檢查房況 */
+function bindFormEvents() {
+  document.getElementById("house").addEventListener("change", checkAvailability);
+  document.getElementById("date").addEventListener("change", checkAvailability);
+  document.getElementById("nights").addEventListener("input", checkAvailability);
 
-  const uid   = document.getElementById("uid").value;
-  const email = document.getElementById("email").value;
-  const name  = document.getElementById("name").value.trim();
-  let phone   = document.getElementById("phone").value.trim();
-  const date  = document.getElementById("date").value;
-  const days  = document.getElementById("days").value || 1;
-  const house = document.getElementById("house").value;
-  const adult = document.getElementById("adult").value || 2;
-  const child = document.getElementById("child").value || 0;
-  const pet   = document.getElementById("pet").value.trim();
-  const note  = document.getElementById("note").value.trim();
+  document.getElementById("bookingForm").addEventListener("submit", onSubmitBooking);
+}
 
-  // 手機簡單驗證
-  phone = phone.replace(/[^0-9]/g, "");
-  if (!/^09\d{8}$/.test(phone)) {
-    showMsg("手機格式錯誤，必須為 09 開頭 10 碼。");
-    setLoading(false);
-    return;
-  }
-  if (!date) {
-    showMsg("請選擇入住日期。");
-    setLoading(false);
+/** 檢查選擇的館別＋入住日＋天數是否有滿房衝突 */
+async function checkAvailability() {
+  const house  = document.getElementById("house").value;
+  const date   = document.getElementById("date").value;
+  const nights = parseInt(document.getElementById("nights").value || "1", 10);
+
+  const dateStr = normalizeDateString(date);
+
+  availabilityHint.textContent = "";
+  availabilityHint.className = "availability";
+  submitBtn.disabled = false;
+
+  if (!house || !dateStr || isNaN(nights) || nights <= 0) {
     return;
   }
 
   try {
-    const payload = {
-      action: "add",
-      admin_key: ADMIN_KEY,
-      uid,
-      email,
-      name,
-      phone,
-      house,
-      date,
-      days,
-      adult,
-      child,
-      pet,
-      note,
-      status: "待確認",
-      payment: "未收款"
-    };
+    const d = new Date(dateStr);
+    const year  = d.getFullYear();
+    const month = d.getMonth() + 1;
 
+    const url = `${API_URL}?action=getCalendar&house=${encodeURIComponent(house)}&year=${year}&month=${month}&ts=${Date.now()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    currentFullDatesCache = (data.fullDates || []).map(normalizeDateString);
+
+    // 依前端選的「入住日 + 天數」計算每一天是否有撞到滿房
+    const conflictDates = [];
+    for (let i = 0; i < nights; i++) {
+      const dt = new Date(dateStr);
+      dt.setDate(dt.getDate() + i);
+      const y  = dt.getFullYear();
+      const m  = String(dt.getMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getDate()).padStart(2, "0");
+      const s  = `${y}-${m}-${dd}`;
+      if (currentFullDatesCache.includes(s)) {
+        conflictDates.push(s);
+      }
+    }
+
+    if (conflictDates.length > 0) {
+      availabilityHint.textContent =
+        `⚠ 此區間含有已滿房日期：${conflictDates.join("、")}，請改選其他入住日或縮短天數。`;
+      availabilityHint.classList.add("full");
+      submitBtn.disabled = true;
+    } else {
+      availabilityHint.textContent = "✅ 此區間目前尚有空房，歡迎預訂。";
+      availabilityHint.classList.add("ok");
+      submitBtn.disabled = false;
+    }
+
+  } catch (err) {
+    console.error("檢查房況失敗：", err);
+    availabilityHint.textContent = "無法確認房況，仍可嘗試送出，實際以管家回覆為準。";
+    availabilityHint.classList.add("full");
+    // 這裡不強制 disable，交由管家後端判斷
+  }
+}
+
+/** 送出預訂表單 */
+async function onSubmitBooking(e) {
+  e.preventDefault();
+
+  const name   = document.getElementById("name").value.trim();
+  let   phone  = document.getElementById("phone").value.trim();
+  const house  = document.getElementById("house").value;
+  const date   = document.getElementById("date").value;
+  const nights = parseInt(document.getElementById("nights").value || "1", 10);
+  const adult  = parseInt(document.getElementById("adult").value || "1", 10);
+  const child  = parseInt(document.getElementById("child").value || "0", 10);
+  const pet    = document.getElementById("pet").value.trim();
+  const note   = document.getElementById("note").value.trim();
+
+  const uid    = document.getElementById("uid").value || "";
+  const email  = document.getElementById("email").value || "";
+
+  if (!name) {
+    alert("請輸入姓名");
+    return;
+  }
+
+  phone = phone.replace(/[^0-9]/g, "");
+  if (!/^09\d{8}$/.test(phone)) {
+    alert("手機格式錯誤，必須為 09 開頭 10 碼");
+    return;
+  }
+
+  if (!house) {
+    alert("請選擇館別");
+    return;
+  }
+
+  const dateStr = normalizeDateString(date);
+  if (!dateStr) {
+    alert("請選擇入住日期");
+    return;
+  }
+
+  if (!nights || nights <= 0) {
+    alert("天數必須大於等於 1");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "送出中…";
+
+  // 準備送給 GAS 的 payload（對應 createBooking）
+  const payload = {
+    action: "createBooking",
+    uid:    uid,
+    name:   name,
+    phone:  phone,
+    email:  email,
+    house:  house,
+    date:   dateStr,
+    nights: nights,
+    adult:  adult,
+    child:  child,
+    pet:    pet,
+    note:   note
+  };
+
+  try {
     const res = await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify(payload)
     });
 
     const json = await res.json();
+    console.log("createBooking 回傳", json);
+
     if (!json.success) {
-      console.error("add 回傳錯誤", json);
-      showMsg("預訂失敗：" + (json.error || "請稍後再試。"));
-      setLoading(false);
-      return;
+      throw new Error(json.error || "預訂失敗");
     }
 
-    showMsg("已成功送出預訂，感謝您！", true);
-    // 送出後可選擇清空或關閉 LIFF
-    // liff.closeWindow();
+    alert("已送出預訂！管家將盡快與您確認訂房。");
+
+    // 清空表單（保留館別）
+    const keepHouse = house;
+    document.getElementById("bookingForm").reset();
+    document.getElementById("house").value = keepHouse;
+    availabilityHint.textContent = "";
+    availabilityHint.className = "availability";
 
   } catch (err) {
     console.error(err);
-    showMsg("系統錯誤，請稍後再試。");
+    alert("預訂失敗，請稍後再試或改用 LINE 私訊管家。");
   } finally {
-    setLoading(false);
+    submitBtn.disabled = false;
+    submitBtn.textContent = "送出預訂";
   }
-});
+}
 </script>
 
 </body>
