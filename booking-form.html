@@ -136,7 +136,7 @@
   <div class="card">
     <h2>請填寫預訂資訊</h2>
     <div id="statusLine" class="status-line">
-      系統正在初始化，請稍候…
+      正在連線 LINE 帳號，請稍候…
     </div>
 
     <form id="bookingForm">
@@ -238,24 +238,21 @@
 </div>
 
 <script>
-// ======== 請依實際情況修改這兩個常數 ========
-
-// ★ 新 Web App URL（如果你沿用原本部署，這串可維持不變）
+// ======== 常數設定 ========
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
-
-// ★ 你的 LIFF ID
 const LIFF_ID = "2008409020-Way8kzM7";
 
-// ============================================
-
+// ======== DOM 變數 ========
 const statusLine       = document.getElementById("statusLine");
 const submitBtn        = document.getElementById("submitBtn");
 const availabilityHint = document.getElementById("availabilityHint");
+const uidInput         = document.getElementById("uid");
+const emailInput       = document.getElementById("email");
 
-let currentFullDatesCache = []; // 暫存當月滿房日，減少重複查詢
+let currentFullDatesCache = []; // 暫存當月滿房日
 
-// 把日期字串標準化成 YYYY-MM-DD
+// --- 日期工具：標準化 YYYY-MM-DD ---
 function normalizeDateString(v) {
   if (!v) return "";
   let s = typeof v === "string" ? v : String(v);
@@ -263,17 +260,16 @@ function normalizeDateString(v) {
   return s.trim();
 }
 
-// 設定入住日最小日期（今天）
+// 設定入住日 min = 今天
 function setMinDate() {
   const today = new Date();
   const y  = today.getFullYear();
   const m  = String(today.getMonth() + 1).padStart(2, "0");
   const d  = String(today.getDate()).padStart(2, "0");
-  const minStr = `${y}-${m}-${d}`;
-  document.getElementById("date").setAttribute("min", minStr);
+  document.getElementById("date").setAttribute("min", `${y}-${m}-${d}`);
 }
 
-// 初始化 LIFF
+// ======== LIFF 初始化：改版 ========
 document.addEventListener("DOMContentLoaded", () => {
   setMinDate();
   initLiff();
@@ -284,23 +280,60 @@ async function initLiff() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
-    if (liff.isInClient()) {
-      const profile = await liff.getProfile();
-      document.getElementById("uid").value = profile.userId || "";
-      statusLine.innerHTML = `已從 LINE 開啟 <br><strong>${profile.displayName}</strong> 您好，請填寫預訂資訊。`;
+    // 不在 LINE App 內，且尚未登入 → 走 LINE Login
+    if (!liff.isInClient() && !liff.isLoggedIn()) {
+      statusLine.textContent = "將前往 LINE 登入頁面，登入後會自動回到此預訂畫面…";
+      liff.login({ redirectUri: window.location.href });
+      return; // 之後會重新載入，不再往下執行
+    }
+
+    // 此時要嘛在 LINE App 內，要嘛已經登入（瀏覽器）
+    let profile = null;
+    try {
+      profile = await liff.getProfile();
+    } catch (e) {
+      console.warn("取得 profile 失敗：", e);
+    }
+
+    const userId = profile?.userId || "";
+    const displayName = profile?.displayName || "貴賓";
+
+    if (userId) {
+      uidInput.value = userId;
+    }
+
+    // 嘗試從 ID Token 取得 email（需在 LINE Developers 開啟 email 權限）
+    try {
+      if (typeof liff.getDecodedIDToken === "function") {
+        const decoded = liff.getDecodedIDToken();
+        if (decoded && decoded.email) {
+          emailInput.value = decoded.email;
+        }
+      }
+    } catch (e) {
+      console.warn("解析 ID Token 失敗：", e);
+    }
+
+    // 顯示狀態文字（依是否在 LINE App 內，給不同提示，但不再恐嚇 XD）
+    if (userId) {
+      if (liff.isInClient()) {
+        statusLine.innerHTML = `已從 LINE App 開啟，<strong>${displayName}</strong> 您好，請填寫預訂資訊。`;
+      } else {
+        statusLine.innerHTML = `<strong>${displayName}</strong> 您好，目前在瀏覽器中使用，本次預訂會綁定您的 LINE 帳號。`;
+      }
     } else {
-      statusLine.innerHTML = "目前不是從 LINE App 開啟，此預訂將不會綁定 LINE 帳號。";
+      statusLine.textContent = "目前無法取得 LINE 帳號，仍可直接填寫預訂（不會綁定 LINE 帳號）。";
     }
 
     submitBtn.disabled = false;
   } catch (err) {
     console.error("LIFF 初始化失敗：", err);
-    statusLine.textContent = "LIFF 初始化失敗，仍可嘗試填寫預訂，但將無法綁定 LINE 帳號。";
+    statusLine.textContent = "LIFF 初始化失敗，您仍可直接填寫預訂（不會綁定 LINE 帳號）。";
     submitBtn.disabled = false;
   }
 }
 
-/** 綁定欄位事件：館別 / 入住日 / 天數 改變時，先檢查房況 */
+// ======== 房況檢查 ========
 function bindFormEvents() {
   document.getElementById("house").addEventListener("change", checkAvailability);
   document.getElementById("date").addEventListener("change", checkAvailability);
@@ -309,7 +342,6 @@ function bindFormEvents() {
   document.getElementById("bookingForm").addEventListener("submit", onSubmitBooking);
 }
 
-/** 檢查選擇的館別＋入住日＋天數是否有滿房衝突 */
 async function checkAvailability() {
   const house  = document.getElementById("house").value;
   const date   = document.getElementById("date").value;
@@ -321,22 +353,22 @@ async function checkAvailability() {
   availabilityHint.className = "availability";
   submitBtn.disabled = false;
 
-  if (!house || !dateStr || isNaN(nights) || nights <= 0) {
-    return;
-  }
+  if (!house || !dateStr || isNaN(nights) || nights <= 0) return;
 
   try {
     const d = new Date(dateStr);
     const year  = d.getFullYear();
     const month = d.getMonth() + 1;
 
-    const url = `${API_URL}?action=getCalendar&house=${encodeURIComponent(house)}&year=${year}&month=${month}&ts=${Date.now()}`;
+    const url = `${API_URL}?action=getCalendar&house=${encodeURIComponent(
+      house
+    )}&year=${year}&month=${month}&ts=${Date.now()}`;
+
     const res = await fetch(url);
     const data = await res.json();
 
     currentFullDatesCache = (data.fullDates || []).map(normalizeDateString);
 
-    // 依前端選的「入住日 + 天數」計算每一天是否有撞到滿房
     const conflictDates = [];
     for (let i = 0; i < nights; i++) {
       const dt = new Date(dateStr);
@@ -345,9 +377,7 @@ async function checkAvailability() {
       const m  = String(dt.getMonth() + 1).padStart(2, "0");
       const dd = String(dt.getDate()).padStart(2, "0");
       const s  = `${y}-${m}-${dd}`;
-      if (currentFullDatesCache.includes(s)) {
-        conflictDates.push(s);
-      }
+      if (currentFullDatesCache.includes(s)) conflictDates.push(s);
     }
 
     if (conflictDates.length > 0) {
@@ -360,16 +390,14 @@ async function checkAvailability() {
       availabilityHint.classList.add("ok");
       submitBtn.disabled = false;
     }
-
   } catch (err) {
     console.error("檢查房況失敗：", err);
-    availabilityHint.textContent = "無法確認房況，仍可嘗試送出，實際以管家回覆為準。";
+    availabilityHint.textContent = "無法即時確認房況，仍可送出，實際以管家回覆為準。";
     availabilityHint.classList.add("full");
-    // 這裡不強制 disable，交由管家後端判斷
   }
 }
 
-/** 送出預訂表單 */
+// ======== 送出預訂 ========
 async function onSubmitBooking(e) {
   e.preventDefault();
 
@@ -383,8 +411,8 @@ async function onSubmitBooking(e) {
   const pet    = document.getElementById("pet").value.trim();
   const note   = document.getElementById("note").value.trim();
 
-  const uid    = document.getElementById("uid").value || "";
-  const email  = document.getElementById("email").value || "";
+  const uid    = uidInput.value || "";
+  const email  = emailInput.value || "";
 
   if (!name) {
     alert("請輸入姓名");
@@ -416,7 +444,6 @@ async function onSubmitBooking(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = "送出中…";
 
-  // 準備送給 GAS 的 payload（對應 createBooking）
   const payload = {
     action: "createBooking",
     uid:    uid,
@@ -447,13 +474,11 @@ async function onSubmitBooking(e) {
 
     alert("已送出預訂！管家將盡快與您確認訂房。");
 
-    // 清空表單（保留館別）
     const keepHouse = house;
     document.getElementById("bookingForm").reset();
     document.getElementById("house").value = keepHouse;
     availabilityHint.textContent = "";
     availabilityHint.className = "availability";
-
   } catch (err) {
     console.error(err);
     alert("預訂失敗，請稍後再試或改用 LINE 私訊管家。");
