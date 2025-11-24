@@ -1,158 +1,149 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<title>資料送出中...</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<title>預訂完成 - 靖寬靖廣</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
-    body {
-        font-family: Arial, "Microsoft JhengHei";
-        background: #f2f2f2;
-        text-align: center;
-        padding: 40px;
-        font-size: 22px;
-    }
+  body {
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    margin: 0;
+    background: #f5f5f5;
+  }
+  header {
+    background: #06c755;
+    color: #fff;
+    padding: 16px;
+    font-size: 22px;
+    font-weight: 900;
+    text-align: center;
+  }
+  .container {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+  }
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 999px;
+    border: none;
+    background: #06c755;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .status {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+  }
 </style>
 </head>
 
 <body>
-<p id="status">📤 正在處理您的預訂，請稍候…</p>
+<header>預訂完成</header>
+
+<div class="container">
+  <div class="card">
+    <h2>您的預訂已送出</h2>
+    <div id="status" class="status">正在傳送預訂摘要到您的 LINE 聊天室…</div>
+    <pre id="summaryText"></pre>
+    <button class="btn" id="closeBtn">關閉視窗</button>
+  </div>
+</div>
 
 <script>
-/* ★★★ 你的 GAS API ★★★ */
-const API_URL =
- "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
+const LIFF_ID = "2008409020-k4Oy7Y0D";
 
-async function main() {
-    try {
-        /* ----------------------------------------------------
-           LIFF 初始化
-        ---------------------------------------------------- */
-        await liff.init({ liffId: "2008409020-k4Oy7Y0D" });
-
-        if (!liff.isLoggedIn()) {
-            liff.login({ redirectUri: window.location.href });
-            return;
-        }
-
-        /* ----------------------------------------------------
-           取得 URL 傳入參數
-        ---------------------------------------------------- */
-        const url = new URL(location.href);
-
-        const house    = url.searchParams.get("house");
-        const date     = url.searchParams.get("date");
-        const days     = url.searchParams.get("days");
-        const name     = url.searchParams.get("name");
-        const phone    = url.searchParams.get("phone");
-        const adult    = url.searchParams.get("adult");
-        const child    = url.searchParams.get("child");
-        const pet      = url.searchParams.get("pet");
-        const note     = url.searchParams.get("note") || "";
-
-        // 🔸 新增：從 URL 取得 uid / email / lineName
-        const uid      = url.searchParams.get("uid")      || "";
-        const email    = url.searchParams.get("email")    || "";
-        const lineName = url.searchParams.get("lineName") || "";
-
-        /* 缺資料時停下來避免空值寫入 GAS */
-        if (!house || !date || !name || !phone) {
-            document.getElementById("status").innerText =
-                "送出資料失敗：必要欄位不完整，請返回重新填寫。";
-            return;
-        }
-
-        /* ----------------------------------------------------
-           組合資料（送給 GAS）
-        ---------------------------------------------------- */
-        const body = {
-            action:    "add",
-            admin_key: "admin2025",
-            uid,          // user-id
-            email,        // E-mail
-            lineName,     // Line 名稱
-            house,
-            date,
-            days,
-            name,
-            phone,
-            adult,
-            child,
-            pet,
-            note
-        };
-
-        /* ----------------------------------------------------
-           送出資料到 Google Sheet
-           👉 不加 headers，使用 no-cors 避免 CORS 問題
-        ---------------------------------------------------- */
-        try {
-            await fetch(API_URL, {
-                method: "POST",
-                body: JSON.stringify(body),
-                mode: "no-cors"
-            });
-            console.log("✅ 已將資料送到 GAS");
-        } catch (e) {
-            console.error("送到 GAS 失敗：", e);
-            document.getElementById("status").innerText =
-                "❗ 系統發生錯誤（寫入失敗）：" + e.message;
-            return;
-        }
-
-        /* ----------------------------------------------------
-           寫入成功（假設成功）→ 回傳訊息給使用者
-        ---------------------------------------------------- */
-        const msg =
-`📘 您的預訂已收到！
-
-👤 姓名：${name}
-📱 手機：${phone}
-🏡 館別：${house}
-📅 包棟日期：${date}
-🌙 包棟天數：${days} 晩
-🧑‍🧑‍🧒 大人：${adult} 位
-🧒 小孩：${child} 位
-🐶 寵物：${pet}
-📝 備註：${note || "無"}
-
-我們會盡快與您聯繫，謝謝您！`;
-
-        // 先更新畫面，避免真的關不掉視窗時看起來一直卡住
-        document.getElementById("status").innerText =
-            "✅ 資料已送出，請稍後留意 LINE 確認訊息。";
-
-        if (liff.isInClient()) {
-            try {
-                await liff.sendMessages([{ type: "text", text: msg }]);
-            } catch (e) {
-                console.error("回傳 LINE 訊息失敗：", e);
-                // 就算訊息沒成功送出，也不要阻止流程
-            }
-
-            // 嘗試關閉視窗（在 LINE 內才有效）
-            try {
-                liff.closeWindow();
-            } catch (e) {
-                console.error("關閉 LIFF 視窗失敗：", e);
-                // 失敗就讓使用者自己按右上角關閉
-            }
-        } else {
-            // 如果不是在 LINE 內，就只顯示完成訊息
-            document.getElementById("status").innerText =
-                "✅ 資料已送出，請關閉此頁面並回到 LINE 查看確認訊息。";
-        }
-
-    } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText =
-            "❗ 系統發生錯誤：" + (err.message || err);
-    }
+function getQueryData() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    id:     p.get("id")     || "",
+    name:   p.get("name")   || "",
+    phone:  p.get("phone")  || "",
+    house:  p.get("house")  || "",
+    date:   p.get("date")   || "",
+    nights: p.get("nights") || "",
+    adult:  p.get("adult")  || "",
+    child:  p.get("child")  || "",
+    pet:    p.get("pet")    || "",
+    note:   p.get("note")   || ""
+  };
 }
 
-main();
+function buildSummaryText(d) {
+  return `靖寬靖廣 預訂摘要
+訂單編號：${d.id || "尚無編號"}
+姓名：${d.name}
+手機：${d.phone}
+館別：${d.house}
+入住日：${d.date}
+住宿：${d.nights} 晚
+人數：大人 ${d.adult} 位 / 小孩 ${d.child} 位
+寵物：${d.pet || "無"}
+備註：${d.note || "無"}
+
+管家確認後會將狀態更新為「已訂房」，即完成預訂。`;
+}
+
+document.getElementById("closeBtn").addEventListener("click", () => {
+  if (window.liff && liff.isInClient && liff.isInClient()) {
+    liff.closeWindow();
+  } else {
+    window.close();
+  }
+});
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const data = getQueryData();
+  const summary = buildSummaryText(data);
+
+  const summaryEl = document.getElementById("summaryText");
+  const statusEl  = document.getElementById("status");
+  summaryEl.textContent = summary;
+
+  try {
+    await liff.init({ liffId: LIFF_ID });
+
+    if (!liff.isInClient()) {
+      statusEl.textContent = "目前不是在 LINE App 內開啟，無法自動回傳訊息。請自行截圖備份此摘要。";
+      return;
+    }
+
+    await liff.sendMessages([
+      { type: "text", text: summary }
+    ]);
+
+    statusEl.textContent = "預訂摘要已傳送到您的 LINE 聊天室，請留存備查。";
+  } catch (err) {
+    console.error("傳送 LINE 訊息失敗：", err);
+    statusEl.textContent = "預訂已送出，但回傳 LINE 訊息失敗，請自行截圖備份此摘要。";
+  }
+});
 </script>
 
 </body>
