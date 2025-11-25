@@ -112,15 +112,18 @@
     border: 1px solid #bbb;
   }
 
-  /* 狀態顏色（與 bookings.html 一樣） */
+  /* 狀態顏色（同步 bookings.html） */
   .status.ok { color:#06c755; font-weight:700; }
   .status.wait { color:#f57c00; font-weight:700; }
   .status.cancel { color:#d32f2f; font-weight:700; }
+  .status.keep { color:#0099cc; font-weight:700; }       /* 保留中 */
+  .status.checkout { color:#9C27B0; font-weight:700; }   /* 已退房 */
 
-  /* 收款顏色 */
+  /* 收款顏色（同步 bookings.html） */
   .pay-none { color:#666; font-weight:700; }
   .pay-deposit { color:#f57c00; font-weight:700; }
   .pay-final { color:#007bff; font-weight:700; }
+  .pay-full { color:#28a745; font-weight:700; }          /* 新增已收全額 */
 </style>
 </head>
 
@@ -178,13 +181,19 @@ const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 
-/* 狀態顏色 */
+/* 狀態顏色（同步 bookings.html） */
 function statusColor(s) {
   if (!s) return "wait";
   s = s.trim();
+
   if (["已訂房","已入住","完成","已確認"].includes(s)) return "ok";
   if (["待確認","處理中"].includes(s)) return "wait";
   if (["已取消","取消"].includes(s)) return "cancel";
+
+  /* 新增 */
+  if (["保留中"].includes(s)) return "keep";
+  if (["已退房"].includes(s)) return "checkout";
+
   return "wait";
 }
 
@@ -193,6 +202,7 @@ function paymentColor(s) {
   if (s === "未收款") return "pay-none";
   if (s === "已收訂金") return "pay-deposit";
   if (s === "已收尾款") return "pay-final";
+  if (s === "已收全額") return "pay-full";  /* 新增 */
   return "pay-none";
 }
 
@@ -213,7 +223,7 @@ async function loadBookings() {
   renderTable();
 }
 
-/* 渲染表格（切換 顯示/編輯 模式） */
+/* 渲染表格 */
 function renderTable(keyword="") {
   const tbody = document.getElementById("bookingBody");
   tbody.innerHTML = "";
@@ -279,7 +289,7 @@ function renderTable(keyword="") {
       <!-- 備註 -->
       <td>${b.note}</td>
 
-      <!-- 狀態（顏色） -->
+      <!-- 狀態 -->
       <td class="view-${b.id}">
         <span class="status ${statusColor(b.status)}">${b.status}</span>
       </td>
@@ -289,10 +299,14 @@ function renderTable(keyword="") {
           <option ${b.status=="已確認"?"selected":""}>已確認</option>
           <option ${b.status=="已入住"?"selected":""}>已入住</option>
           <option ${b.status=="已取消"?"selected":""}>已取消</option>
+
+          <!-- 新增 -->
+          <option ${b.status=="保留中"?"selected":""}>保留中</option>
+          <option ${b.status=="已退房"?"selected":""}>已退房</option>
         </select>
       </td>
 
-      <!-- 收款（顏色） -->
+      <!-- 收款 -->
       <td class="view-${b.id}">
         <span class="${paymentColor(b.payment)}">${b.payment}</span>
       </td>
@@ -301,6 +315,7 @@ function renderTable(keyword="") {
           <option ${b.payment=="未收款"?"selected":""}>未收款</option>
           <option ${b.payment=="已收訂金"?"selected":""}>已收訂金</option>
           <option ${b.payment=="已收尾款"?"selected":""}>已收尾款</option>
+          <option ${b.payment=="已收全額"?"selected":""}>已收全額</option>
         </select>
       </td>
 
@@ -313,7 +328,6 @@ function renderTable(keyword="") {
   });
 }
 
-/* 修改 / 儲存 */
 function toggleEdit(id, btn) {
   const isEditing = btn.textContent === "儲存";
 
@@ -329,7 +343,6 @@ function toggleEdit(id, btn) {
   }
 }
 
-/* 更新訂單 */
 async function updateBooking(id, btn) {
   const tr = btn.closest("tr");
   const inputs = tr.querySelectorAll(".edit-" + id + " [data-field]");
@@ -349,6 +362,7 @@ async function updateBooking(id, btn) {
 
   if (json.success) {
     btn.textContent = "完成";
+
     const updated = allBookings.find(b => b.id == id);
     if (updated) Object.assign(updated, payload);
 
@@ -362,14 +376,15 @@ async function updateBooking(id, btn) {
   }
 }
 
-/* 其他功能 */
 document.getElementById("btnSearch").addEventListener("click", ()=>{
   renderTable(document.getElementById("keyword").value);
 });
+
 document.getElementById("btnClear").addEventListener("click", ()=>{
   document.getElementById("keyword").value = "";
   renderTable("");
 });
+
 document.getElementById("btnExport").addEventListener("click", ()=>{
   const rows = [
     ["ID","建立","姓名","手機","館別","入住日","天數","大人","小孩","寵物","備註","狀態","收款"],
@@ -386,7 +401,6 @@ document.getElementById("btnExport").addEventListener("click", ()=>{
   a.click();
 });
 
-/* 初始化 */
 loadBookings();
 </script>
 
