@@ -54,6 +54,16 @@
   }
   .btn-primary { background:#06c755; color:#fff; }
 
+  /* 排序箭頭 */
+  th.sortable { cursor: pointer; position: relative; }
+  th.sortable::after {
+    content: "⇅";
+    position: absolute;
+    right: 6px;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
   /* 表格 */
   table {
     width: 100%;
@@ -84,14 +94,14 @@
   .status-ok { color:#06c755; font-weight:700; }
   .status-wait { color:#f57c00; font-weight:700; }
   .status-cancel { color:#d32f2f; font-weight:700; }
-  .status-hold { color:#9C27B0; font-weight:700; }      /* 保留中 */
-  .status-checkout { color:#283593; font-weight:700; }  /* 已退房 */
+  .status-hold { color:#9C27B0; font-weight:700; }
+  .status-checkout { color:#283593; font-weight:700; }
 
   /* 收款顏色 */
   .pay-none { color:#666; font-weight:700; }
   .pay-deposit { color:#f57c00; font-weight:700; }
   .pay-final { color:#007bff; font-weight:700; }
-  .pay-full { color:#2e7d32; font-weight:700; }  /* 新：已收全額 */
+  .pay-full { color:#2e7d32; font-weight:700; }
 
 </style>
 </head>
@@ -101,6 +111,7 @@
 
 <div class="wrapper">
 
+  <!-- 🔍 搜尋 -->
   <section class="section">
     <h2>🔍 搜尋訂房資料</h2>
     <div class="search-row">
@@ -112,7 +123,28 @@
     <div id="bookingsStatus">載入中…</div>
   </section>
 
-  <!-- 訂單表 -->
+  <!-- 🧱 一鍵標滿（外部訂房 / 電話訂房） -->
+  <section class="section">
+    <h2>📌 快速標註「滿房」</h2>
+
+    <div class="field">
+      <label>館別</label>
+      <select id="blockHouse">
+        <option value="A館">A館</option>
+        <option value="B館">B館</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>日期</label>
+      <input id="blockDate" type="date" />
+    </div>
+
+    <button class="btn btn-primary" id="btnBlock">🚫 將該日標示為滿房</button>
+    <div id="blockStatus" style="margin-top:8px; color:#333;"></div>
+  </section>
+
+  <!-- 表格 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
 
@@ -120,19 +152,19 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>建立</th>
-            <th>姓名</th>
-            <th>手機</th>
-            <th>館別</th>
-            <th>入住日</th>
-            <th>天數</th>
-            <th>大人</th>
-            <th>小孩</th>
+            <th class="sortable" data-field="id">ID</th>
+            <th class="sortable" data-field="createdAt">建立</th>
+            <th class="sortable" data-field="name">姓名</th>
+            <th class="sortable" data-field="phone">手機</th>
+            <th class="sortable" data-field="house">館別</th>
+            <th class="sortable" data-field="date">入住日</th>
+            <th class="sortable" data-field="nights">天數</th>
+            <th class="sortable" data-field="adult">大人</th>
+            <th class="sortable" data-field="child">小孩</th>
             <th>寵物</th>
             <th>備註</th>
-            <th>狀態</th>
-            <th>收款</th>
+            <th class="sortable" data-field="status">狀態</th>
+            <th class="sortable" data-field="payment">收款</th>
             <th>更新</th>
           </tr>
         </thead>
@@ -141,17 +173,17 @@
     </div>
 
   </section>
-</div>
-
 <script>
 const API_URL =
  "https://script.google.com/macros/s/AKfycbxAhWFD3rLv2O1RSnmEA3EJjXIK5vFKja4IHGtL8EW3q-6ZD77K1Emc_ryFAK1fOZKA/exec";
 const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
+let sortField = "createdAt";
+let sortAsc = false; // 預設：最新建立在最上方（遞減）
 
 /* ============================
-      狀態顏色（同步 bookings.html）
+    狀態 / 收款 顏色
    ============================ */
 function statusClass(s){
   s = (s||"").trim();
@@ -163,9 +195,6 @@ function statusClass(s){
   return "status-wait";
 }
 
-/* ============================
-      收款顏色
-   ============================ */
 function payClass(s){
   if(s==="已收全額") return "pay-full";
   if(s==="已收尾款") return "pay-final";
@@ -179,6 +208,9 @@ function formatDateOnly(v){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
+/* ============================
+    後台載入全部訂單
+   ============================ */
 async function loadBookings(){
   const res = await fetch(API_URL,{
     method:"POST",
@@ -186,16 +218,50 @@ async function loadBookings(){
   });
   const json = await res.json();
   allBookings = json.bookings || [];
-  document.getElementById("bookingsStatus").textContent = `共 ${allBookings.length} 筆`;
+
+  document.getElementById("bookingsStatus").textContent =
+    `共 ${allBookings.length} 筆`;
+
   renderTable();
 }
 
+/* ============================
+    排序功能
+   ============================ */
+function sortBookings(list){
+  return list.sort((a,b)=>{
+    let v1 = a[sortField];
+    let v2 = b[sortField];
+
+    // 日期字串 → Date
+    if(sortField === "createdAt" || sortField === "date"){
+      v1 = new Date(v1);
+      v2 = new Date(v2);
+    }
+
+    // 數字欄
+    if(sortField === "nights" || sortField === "adult" || sortField === "child"){
+      v1 = Number(v1);
+      v2 = Number(v2);
+    }
+
+    if(v1 < v2) return sortAsc ? -1 : 1;
+    if(v1 > v2) return sortAsc ? 1 : -1;
+    return 0;
+  });
+}
+
+/* ============================
+    渲染表格
+   ============================ */
 function renderTable(keyword=""){
   const tbody = document.getElementById("bookingBody");
   tbody.innerHTML="";
 
   const kw = keyword.trim().toLowerCase();
-  const data = allBookings.filter(b => !kw || JSON.stringify(b).toLowerCase().includes(kw));
+  let data = allBookings.filter(b => !kw || JSON.stringify(b).toLowerCase().includes(kw));
+
+  data = sortBookings(data);
 
   data.forEach(b=>{
     const tr=document.createElement("tr");
@@ -242,10 +308,7 @@ function renderTable(keyword=""){
       </td>
 
       <!-- 寵物 -->
-      <td class="view-${b.id}">${b.pet}</td>
-      <td class="edit-${b.id}" style="display:none">
-        <input type="text" value="${b.pet}" data-field="pet">
-      </td>
+      <td>${b.pet}</td>
 
       <!-- 備註 -->
       <td>${b.note}</td>
@@ -278,6 +341,7 @@ function renderTable(keyword=""){
         </select>
       </td>
 
+      <!-- 修改按鈕 -->
       <td>
         <button class="btn btn-primary" onclick='toggleEdit("${b.id}", this)'>修改</button>
       </td>
@@ -287,6 +351,26 @@ function renderTable(keyword=""){
   });
 }
 
+/* ============================
+    點欄位觸發排序
+   ============================ */
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+      const field = th.dataset.field;
+      if(sortField === field){
+        sortAsc = !sortAsc;
+      } else {
+        sortField = field;
+        sortAsc = true;
+      }
+      renderTable(document.getElementById("keyword").value);
+    });
+  });
+});
+/* ============================
+    修改模式（切換）
+   ============================ */
 function toggleEdit(id, btn){
   const editing = btn.textContent === "儲存";
   const views = document.querySelectorAll(`.view-${id}`);
@@ -301,61 +385,84 @@ function toggleEdit(id, btn){
   }
 }
 
+/* ============================
+    更新訂單
+   ============================ */
 async function updateBooking(id, btn){
   const tr = btn.closest("tr");
   const inputs = tr.querySelectorAll(`.edit-${id} [data-field]`);
-  const data = { id, action:"updateBooking", admin_key:ADMIN_KEY };
 
-  inputs.forEach(el => data[el.dataset.field] = el.value);
+  const payload = {
+    id,
+    action:"updateBooking",
+    admin_key:ADMIN_KEY
+  };
 
-  btn.textContent="更新中…";
+  inputs.forEach(el => {
+    payload[el.dataset.field] = el.value;
+  });
+
+  btn.textContent = "更新中…";
 
   const res = await fetch(API_URL,{
     method:"POST",
-    body:JSON.stringify(data)
+    body:JSON.stringify(payload)
   });
+
   const json = await res.json();
 
   if(json.success){
-    Object.assign(allBookings.find(x=>x.id==id), data);
+    Object.assign(allBookings.find(x=>x.id==id), payload);
 
-    btn.textContent="完成";
+    btn.textContent = "完成";
     setTimeout(()=>{
       renderTable(document.getElementById("keyword").value);
     },400);
+
   } else {
-    btn.textContent="修改";
-    alert("更新失敗："+json.error);
+    btn.textContent = "修改";
+    alert("更新失敗：" + json.error);
   }
 }
 
-/* 查詢 */
+/* ============================
+    搜尋
+   ============================ */
 document.getElementById("btnSearch").addEventListener("click",()=>{
   renderTable(document.getElementById("keyword").value);
 });
+
 document.getElementById("btnClear").addEventListener("click",()=>{
-  document.getElementById("keyword").value="";
+  document.getElementById("keyword").value = "";
   renderTable("");
 });
 
-/* 匯出 */
+/* ============================
+    匯出 CSV
+   ============================ */
 document.getElementById("btnExport").addEventListener("click",()=>{
-  const rows=[
-    ["ID","建立","姓名","手機","館別","入住日","天數","大人","小孩","寵物","備註","狀態","收款"],
+
+  const rows = [
+    ["ID","建立","姓名","手機","館別","入住日","天數",
+     "大人","小孩","寵物","備註","狀態","收款"],
     ...allBookings.map(b=>[
       b.id,b.createdAt,b.name,b.phone,b.house,b.date,
       b.nights,b.adult,b.child,b.pet,b.note,b.status,b.payment
     ])
   ];
+
   let csv = rows.map(r=>r.join(",")).join("\n");
   const blob = new Blob([csv],{type:"text/csv"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="bookings.csv";
+  const a = document.createElement("a");
+
+  a.href = URL.createObjectURL(blob);
+  a.download = "bookings.csv";
   a.click();
 });
 
-/* 初始化 */
+/* ============================
+    初始化
+   ============================ */
 loadBookings();
 </script>
 
