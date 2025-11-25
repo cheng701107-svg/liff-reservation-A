@@ -123,7 +123,7 @@
     <div id="bookingsStatus">載入中…</div>
   </section>
 
-  <!-- 🧱 一鍵標滿（外部訂房 / 電話訂房） -->
+  <!-- 🧱 一鍵標滿 -->
   <section class="section">
     <h2>📌 快速標註「滿房」</h2>
 
@@ -143,7 +143,6 @@
     <button class="btn btn-primary" id="btnBlock">🚫 將該日標示為滿房</button>
     <div id="blockStatus" style="margin-top:8px; color:#333;"></div>
   </section>
-
   <!-- 表格 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
@@ -173,6 +172,7 @@
     </div>
 
   </section>
+
 <script>
 const API_URL =
  "https://script.google.com/macros/s/AKfycbxAhWFD3rLv2O1RSnmEA3EJjXIK5vFKja4IHGtL8EW3q-6ZD77K1Emc_ryFAK1fOZKA/exec";
@@ -180,7 +180,7 @@ const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 let sortField = "createdAt";
-let sortAsc = false; // 預設：最新建立在最上方（遞減）
+let sortAsc = false; // 預設最新建立在最上方
 
 /* ============================
     狀態 / 收款 顏色
@@ -240,7 +240,7 @@ function sortBookings(list){
     }
 
     // 數字欄
-    if(sortField === "nights" || sortField === "adult" || sortField === "child"){
+    if(["nights","adult","child"].includes(sortField)){
       v1 = Number(v1);
       v2 = Number(v2);
     }
@@ -350,7 +350,6 @@ function renderTable(keyword=""){
     tbody.appendChild(tr);
   });
 }
-
 /* ============================
     點欄位觸發排序
    ============================ */
@@ -367,7 +366,11 @@ document.addEventListener("DOMContentLoaded", () => {
       renderTable(document.getElementById("keyword").value);
     });
   });
+
+  // 綁定「快速標滿房」按鈕
+  document.getElementById("btnBlock").addEventListener("click", blockDateFull);
 });
+
 /* ============================
     修改模式（切換）
    ============================ */
@@ -459,6 +462,53 @@ document.getElementById("btnExport").addEventListener("click",()=>{
   a.download = "bookings.csv";
   a.click();
 });
+
+/* ============================
+    🧱 一鍵標滿房（新增假訂單）
+   ============================ */
+async function blockDateFull(){
+  const house = document.getElementById("blockHouse").value;
+  const date = document.getElementById("blockDate").value;
+
+  if(!date){
+    alert("請選擇要標示滿房的日期");
+    return;
+  }
+
+  const payload = {
+    action: "createBooking",
+    uid: "SYSTEM",
+    name: "外部訂房",
+    phone: "0000000000",
+    email: "",
+    house,
+    date,
+    nights: 1,
+    adult: 0,
+    child: 0,
+    pet: "",
+    note: "系統：標示滿房",
+    status: "保留中",
+    payment: "未收款"
+  };
+
+  document.getElementById("blockStatus").textContent = "新增中…";
+
+  const res = await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify(payload)
+  });
+  const json = await res.json();
+
+  if(json.success){
+    document.getElementById("blockStatus").textContent =
+      `已標示滿房（${date}）`;
+    loadBookings();
+  } else {
+    document.getElementById("blockStatus").textContent =
+      "標示失敗：" + json.error;
+  }
+}
 
 /* ============================
     初始化
