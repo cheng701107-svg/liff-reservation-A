@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>預訂完成 - 靖寬靖廣</title>
+<title>預訂完成</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 顯示文字摘要
   const summaryText =
-`靖寬靖廣 預訂摘要
+`預訂摘要
 訂單編號：${q.id}
 姓名：${q.name}
 手機：${q.phone}
@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         contents: [
           {
             type: "text",
-            text: "靖寬靖廣 預訂成功",
+            text: "預訂成功",
             weight: "bold",
             size: "lg",
             color: "#06c755"
@@ -188,7 +188,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await liff.sendMessages([
       {
         type: "flex",
-        altText: "靖寬靖廣預訂摘要",
+        altText: "預訂摘要",
         contents: flex
       }
     ]);
