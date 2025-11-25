@@ -369,6 +369,19 @@ function formatDateOnly(v){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
+  function formatDateTime(v) {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+
+  return `${y}-${m}-${da} ${hh}:${mm}`;
+}
+
 /* ============================
     後台載入全部訂單
    ============================ */
@@ -430,7 +443,7 @@ function renderTable(keyword=""){
 
     tr.innerHTML = `
       <td>${b.id}</td>
-      <td>${b.createdAt}</td>
+      <td>${formatDateTime(b.createdAt)}</td>
       <td>${b.name}</td>
       <td>${b.phone}</td>
 
