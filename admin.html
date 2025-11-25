@@ -54,30 +54,13 @@
   }
   .btn-primary { background:#06c755; color:#fff; }
 
-  /* ===============================
-       表格（桌機 + 手機 + 固定欄位）
-     =============================== */
-  .table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
+  /* 表格 */
   table {
-    width: 1300px;
+    width: 100%;
     border-collapse: collapse;
     background: #fff;
     border-radius: 10px;
-    min-width: 1200px;
   }
-
-  thead {
-    background:#00b33c;
-    color:#fff;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-  }
-
   th, td {
     padding: 8px 6px;
     font-size: 14px;
@@ -85,24 +68,9 @@
     border-bottom: 1px solid #eee;
     white-space: nowrap;
   }
-
-  /* 固定左側 ID 欄位 */
-  td:first-child, th:first-child {
-    position: sticky;
-    left: 0;
-    background: #fff;
-    z-index: 15;
-    font-weight: 700;
-  }
-  th:first-child {
+  thead {
     background: #00b33c;
-    color:#fff;
-  }
-
-  /* 手機版縮小字體 */
-  @media (max-width: 768px) {
-    th, td { font-size: 12px; padding: 6px 4px; }
-    table { min-width: 950px; }
+    color: #fff;
   }
 
   input, select {
@@ -112,18 +80,19 @@
     border: 1px solid #bbb;
   }
 
-  /* 狀態顏色（同步 bookings.html） */
-  .status.ok { color:#06c755; font-weight:700; }
-  .status.wait { color:#f57c00; font-weight:700; }
-  .status.cancel { color:#d32f2f; font-weight:700; }
-  .status.keep { color:#0099cc; font-weight:700; }       /* 保留中 */
-  .status.checkout { color:#9C27B0; font-weight:700; }   /* 已退房 */
+  /* 狀態顏色 */
+  .status-ok { color:#06c755; font-weight:700; }
+  .status-wait { color:#f57c00; font-weight:700; }
+  .status-cancel { color:#d32f2f; font-weight:700; }
+  .status-hold { color:#9C27B0; font-weight:700; }      /* 保留中 */
+  .status-checkout { color:#283593; font-weight:700; }  /* 已退房 */
 
-  /* 收款顏色（同步 bookings.html） */
+  /* 收款顏色 */
   .pay-none { color:#666; font-weight:700; }
   .pay-deposit { color:#f57c00; font-weight:700; }
   .pay-final { color:#007bff; font-weight:700; }
-  .pay-full { color:#28a745; font-weight:700; }          /* 新增已收全額 */
+  .pay-full { color:#2e7d32; font-weight:700; }  /* 新：已收全額 */
+
 </style>
 </head>
 
@@ -147,7 +116,7 @@
   <section class="section">
     <h2>📋 訂房清單</h2>
 
-    <div class="table-container">
+    <div>
       <table>
         <thead>
           <tr>
@@ -170,8 +139,8 @@
         <tbody id="bookingBody"></tbody>
       </table>
     </div>
-  </section>
 
+  </section>
 </div>
 
 <script>
@@ -181,41 +150,39 @@ const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 
-/* 狀態顏色（同步 bookings.html） */
-function statusColor(s) {
-  if (!s) return "wait";
-  s = s.trim();
-
-  if (["已訂房","已入住","完成","已確認"].includes(s)) return "ok";
-  if (["待確認","處理中"].includes(s)) return "wait";
-  if (["已取消","取消"].includes(s)) return "cancel";
-
-  /* 新增 */
-  if (["保留中"].includes(s)) return "keep";
-  if (["已退房"].includes(s)) return "checkout";
-
-  return "wait";
+/* ============================
+      狀態顏色（同步 bookings.html）
+   ============================ */
+function statusClass(s){
+  s = (s||"").trim();
+  if(["已訂房","已入住","完成","已確認"].includes(s)) return "status-ok";
+  if(["待確認","處理中"].includes(s)) return "status-wait";
+  if(["已取消","取消"].includes(s)) return "status-cancel";
+  if(["保留中"].includes(s)) return "status-hold";
+  if(["已退房"].includes(s)) return "status-checkout";
+  return "status-wait";
 }
 
-/* 收款顏色 */
-function paymentColor(s) {
-  if (s === "未收款") return "pay-none";
-  if (s === "已收訂金") return "pay-deposit";
-  if (s === "已收尾款") return "pay-final";
-  if (s === "已收全額") return "pay-full";  /* 新增 */
+/* ============================
+      收款顏色
+   ============================ */
+function payClass(s){
+  if(s==="已收全額") return "pay-full";
+  if(s==="已收尾款") return "pay-final";
+  if(s==="已收訂金") return "pay-deposit";
   return "pay-none";
 }
 
-function formatDateOnly(v) {
-  const d = new Date(v);
-  if (isNaN(d.getTime())) return v;
+function formatDateOnly(v){
+  const d=new Date(v);
+  if(isNaN(d.getTime())) return v;
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
-async function loadBookings() {
+async function loadBookings(){
   const res = await fetch(API_URL,{
     method:"POST",
-    body:JSON.stringify({ action:"getAllBookings", admin_key:ADMIN_KEY })
+    body:JSON.stringify({action:"getAllBookings", admin_key:ADMIN_KEY})
   });
   const json = await res.json();
   allBookings = json.bookings || [];
@@ -223,24 +190,18 @@ async function loadBookings() {
   renderTable();
 }
 
-/* 渲染表格 */
-function renderTable(keyword="") {
+function renderTable(keyword=""){
   const tbody = document.getElementById("bookingBody");
-  tbody.innerHTML = "";
+  tbody.innerHTML="";
 
   const kw = keyword.trim().toLowerCase();
+  const data = allBookings.filter(b => !kw || JSON.stringify(b).toLowerCase().includes(kw));
 
-  const data = allBookings.filter(b => {
-    if (!kw) return true;
-    return Object.values(b).some(v => String(v).toLowerCase().includes(kw));
-  });
-
-  data.forEach(b => {
-    const tr = document.createElement("tr");
-    tr.dataset.id = b.id;
+  data.forEach(b=>{
+    const tr=document.createElement("tr");
+    tr.dataset.id=b.id;
 
     tr.innerHTML = `
-
       <td>${b.id}</td>
       <td>${b.createdAt}</td>
       <td>${b.name}</td>
@@ -256,7 +217,7 @@ function renderTable(keyword="") {
         </select>
       </td>
 
-      <!-- 入住日期 -->
+      <!-- 入住日 -->
       <td class="view-${b.id}">${formatDateOnly(b.date)}</td>
       <td class="edit-${b.id}" style="display:none">
         <input type="date" value="${formatDateOnly(b.date)}" data-field="date">
@@ -291,31 +252,29 @@ function renderTable(keyword="") {
 
       <!-- 狀態 -->
       <td class="view-${b.id}">
-        <span class="status ${statusColor(b.status)}">${b.status}</span>
+        <span class="${statusClass(b.status)}">${b.status}</span>
       </td>
       <td class="edit-${b.id}" style="display:none">
         <select data-field="status">
-          <option ${b.status=="待確認"?"selected":""}>待確認</option>
-          <option ${b.status=="已確認"?"selected":""}>已確認</option>
-          <option ${b.status=="已入住"?"selected":""}>已入住</option>
-          <option ${b.status=="已取消"?"selected":""}>已取消</option>
-
-          <!-- 新增 -->
-          <option ${b.status=="保留中"?"selected":""}>保留中</option>
-          <option ${b.status=="已退房"?"selected":""}>已退房</option>
+          <option>待確認</option>
+          <option>已確認</option>
+          <option>已入住</option>
+          <option>已取消</option>
+          <option>保留中</option>
+          <option>已退房</option>
         </select>
       </td>
 
       <!-- 收款 -->
       <td class="view-${b.id}">
-        <span class="${paymentColor(b.payment)}">${b.payment}</span>
+        <span class="${payClass(b.payment)}">${b.payment}</span>
       </td>
       <td class="edit-${b.id}" style="display:none">
         <select data-field="payment">
-          <option ${b.payment=="未收款"?"selected":""}>未收款</option>
-          <option ${b.payment=="已收訂金"?"selected":""}>已收訂金</option>
-          <option ${b.payment=="已收尾款"?"selected":""}>已收尾款</option>
-          <option ${b.payment=="已收全額"?"selected":""}>已收全額</option>
+          <option>未收款</option>
+          <option>已收訂金</option>
+          <option>已收尾款</option>
+          <option>已收全額</option>
         </select>
       </td>
 
@@ -328,79 +287,75 @@ function renderTable(keyword="") {
   });
 }
 
-function toggleEdit(id, btn) {
-  const isEditing = btn.textContent === "儲存";
+function toggleEdit(id, btn){
+  const editing = btn.textContent === "儲存";
+  const views = document.querySelectorAll(`.view-${id}`);
+  const edits = document.querySelectorAll(`.edit-${id}`);
 
-  const viewEls = document.querySelectorAll(`.view-${id}`);
-  const editEls = document.querySelectorAll(`.edit-${id}`);
-
-  if (!isEditing) {
-    viewEls.forEach(el => el.style.display = "none");
-    editEls.forEach(el => el.style.display = "table-cell");
-    btn.textContent = "儲存";
+  if(!editing){
+    views.forEach(el=>el.style.display="none");
+    edits.forEach(el=>el.style.display="table-cell");
+    btn.textContent="儲存";
   } else {
     updateBooking(id, btn);
   }
 }
 
-async function updateBooking(id, btn) {
+async function updateBooking(id, btn){
   const tr = btn.closest("tr");
-  const inputs = tr.querySelectorAll(".edit-" + id + " [data-field]");
+  const inputs = tr.querySelectorAll(`.edit-${id} [data-field]`);
+  const data = { id, action:"updateBooking", admin_key:ADMIN_KEY };
 
-  const payload = {
-    id,
-    action: "updateBooking",
-    admin_key: ADMIN_KEY
-  };
+  inputs.forEach(el => data[el.dataset.field] = el.value);
 
-  inputs.forEach(el => payload[el.dataset.field] = el.value);
+  btn.textContent="更新中…";
 
-  btn.textContent = "更新中…";
-
-  const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+  const res = await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify(data)
+  });
   const json = await res.json();
 
-  if (json.success) {
-    btn.textContent = "完成";
+  if(json.success){
+    Object.assign(allBookings.find(x=>x.id==id), data);
 
-    const updated = allBookings.find(b => b.id == id);
-    if (updated) Object.assign(updated, payload);
-
-    setTimeout(() => {
+    btn.textContent="完成";
+    setTimeout(()=>{
       renderTable(document.getElementById("keyword").value);
-    }, 400);
-
+    },400);
   } else {
-    btn.textContent = "修改";
-    alert("更新失敗：" + json.error);
+    btn.textContent="修改";
+    alert("更新失敗："+json.error);
   }
 }
 
-document.getElementById("btnSearch").addEventListener("click", ()=>{
+/* 查詢 */
+document.getElementById("btnSearch").addEventListener("click",()=>{
   renderTable(document.getElementById("keyword").value);
 });
-
-document.getElementById("btnClear").addEventListener("click", ()=>{
-  document.getElementById("keyword").value = "";
+document.getElementById("btnClear").addEventListener("click",()=>{
+  document.getElementById("keyword").value="";
   renderTable("");
 });
 
-document.getElementById("btnExport").addEventListener("click", ()=>{
-  const rows = [
+/* 匯出 */
+document.getElementById("btnExport").addEventListener("click",()=>{
+  const rows=[
     ["ID","建立","姓名","手機","館別","入住日","天數","大人","小孩","寵物","備註","狀態","收款"],
     ...allBookings.map(b=>[
-      b.id,b.createdAt,b.name,b.phone,b.house,b.date,b.nights,
-      b.adult,b.child,b.pet,b.note,b.status,b.payment
+      b.id,b.createdAt,b.name,b.phone,b.house,b.date,
+      b.nights,b.adult,b.child,b.pet,b.note,b.status,b.payment
     ])
   ];
   let csv = rows.map(r=>r.join(",")).join("\n");
-  const blob = new Blob([csv], {type:"text/csv"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "bookings.csv";
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="bookings.csv";
   a.click();
 });
 
+/* 初始化 */
 loadBookings();
 </script>
 
