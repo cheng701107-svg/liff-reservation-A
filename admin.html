@@ -143,6 +143,31 @@
     <button class="btn btn-primary" id="btnBlock">🚫 將該日標示為滿房</button>
     <div id="blockStatus" style="margin-top:8px; color:#333;"></div>
   </section>
+
+  <!-- ============================ -->
+<!-- 📅 滿房月曆總覽 -->
+<!-- ============================ -->
+<section class="section">
+  <h2>📅 滿房月曆總覽</h2>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <label>館別：</label>
+    <select id="calHouse">
+      <option value="A館">A館</option>
+      <option value="B館">B館</option>
+    </select>
+
+    <button class="btn" id="prevMonth">← 上一月</button>
+    <button class="btn" id="nextMonth">下一月 →</button>
+  </div>
+
+  <h3 id="calTitle" style="margin-top:10px;"></h3>
+
+  <table id="calendarTable" style="margin-top:10px; width:100%; text-align:center;">
+    <!-- JS 填入 -->
+  </table>
+</section>
+
   <!-- 表格 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
@@ -508,6 +533,101 @@ async function blockDateFull(){
     document.getElementById("blockStatus").textContent =
       "標示失敗：" + json.error;
   }
+}
+
+  /* ============================
+   📅 滿房月曆功能
+   ============================ */
+
+let calYear;
+let calMonth;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth() + 1;
+
+  document.getElementById("prevMonth").addEventListener("click", () => {
+    calMonth--;
+    if (calMonth === 0) {
+      calMonth = 12;
+      calYear--;
+    }
+    loadCalendar();
+  });
+
+  document.getElementById("nextMonth").addEventListener("click", () => {
+    calMonth++;
+    if (calMonth === 13) {
+      calMonth = 1;
+      calYear++;
+    }
+    loadCalendar();
+  });
+
+  document.getElementById("calHouse").addEventListener("change", loadCalendar);
+
+  loadCalendar(); // 開頁先載入一次
+});
+
+async function loadCalendar() {
+  const house = document.getElementById("calHouse").value;
+
+  const res = await fetch(
+    `${API_URL}?action=getCalendar&house=${house}&year=${calYear}&month=${calMonth}`
+  );
+  const json = await res.json();
+
+  const full = json.fullDates || [];
+
+  drawCalendar(full);
+}
+
+function drawCalendar(fullDates) {
+  const calTitle = document.getElementById("calTitle");
+  const table = document.getElementById("calendarTable");
+
+  calTitle.textContent = `${calYear} 年 ${calMonth} 月`;
+
+  // 建立日期資訊
+  const firstDay = new Date(calYear, calMonth - 1, 1);
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const startWeekDay = firstDay.getDay();
+
+  let html = `
+    <tr>
+      <th>日</th><th>一</th><th>二</th><th>三</th>
+      <th>四</th><th>五</th><th>六</th>
+    </tr>
+    <tr>
+  `;
+
+  let dayCount = 0;
+
+  // 前面空格
+  for (let i = 0; i < startWeekDay; i++) {
+    html += "<td></td>";
+    dayCount++;
+  }
+
+  // 日期
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+    const isFull = fullDates.includes(dateStr);
+
+    html += `<td style="padding:8px; ${isFull ? "background:#f44336;color:#fff;font-weight:700;" : ""}">
+      ${d}${isFull ? "<br><small>滿</small>" : ""}
+    </td>`;
+
+    dayCount++;
+
+    if (dayCount % 7 === 0) html += "</tr><tr>";
+  }
+
+  html += "</tr>";
+
+  table.innerHTML = html;
 }
 
 /* ============================
