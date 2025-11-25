@@ -2,12 +2,12 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>靖寬靖廣 — 管理後台（極簡版）</title>
+<title>靖寬靖廣 — 管理後台（完整版）</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
   body {
-    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    font-family: "Noto Sans TC","Microsoft JhengHei", sans-serif;
     margin: 0;
     background: #f5f5f5;
   }
@@ -20,16 +20,14 @@
     text-align: center;
   }
   .wrapper {
-    max-width: 1200px;
+    max-width: 1300px;
     margin: 0 auto;
     padding: 16px;
   }
-  h2 {
-    margin: 16px 0 8px;
-    font-size: 20px;
-  }
+
+  /* 搜尋 */
   .section {
-    background: #f9f9f9;
+    background: #fff;
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 20px;
@@ -46,7 +44,6 @@
     font-size: 16px;
     border-radius: 8px;
     border: 1px solid #ccc;
-    box-sizing: border-box;
   }
   .btn {
     padding: 8px 12px;
@@ -56,25 +53,13 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  .btn-primary {
-    background: #06c755;
-    color: #fff;
-  }
-  .btn-primary:hover {
-    opacity: 0.9;
-  }
-  .loading,
-  .error {
-    font-size: 14px;
-    margin-top: 8px;
-  }
-  .loading { color: #666; }
-  .error   { color: #d32f2f; }
+  .btn-primary { background: #06c755; color:#fff; }
+  .btn-danger { background:#d32f2f; color:#fff; }
 
+  /* 表格 */
   table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
     background: #fff;
     border-radius: 10px;
     overflow: hidden;
@@ -84,28 +69,24 @@
     color: #fff;
   }
   th, td {
-    padding: 10px 8px;
+    padding: 10px 6px;
     font-size: 14px;
     text-align: center;
     border-bottom: 1px solid #eee;
   }
-  th {
-    font-weight: 700;
-  }
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
-  @media (max-width: 768px) {
-    th, td {
-      font-size: 13px;
-      padding: 8px 4px;
-    }
+  tbody tr:last-child td { border-bottom: none; }
+
+  select, input[type='text'] {
+    padding: 4px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 95%;
   }
 </style>
 </head>
 
 <body>
-<header>靖寬靖廣 — 管理後台（極簡版）</header>
+<header>靖寬靖廣 — 管理後台</header>
 
 <div class="wrapper">
 
@@ -113,26 +94,24 @@
   <section class="section">
     <h2>🔍 搜尋訂房資料</h2>
     <div class="search-row">
-      <input
-        id="keyword"
-        type="text"
-        placeholder="輸入姓名、手機、館別或入住日期（YYYY-MM-DD）"
-      />
+      <input id="keyword" type="text" placeholder="輸入姓名、手機、館別、入住日期…" />
       <button class="btn btn-primary" id="btnSearch">搜尋</button>
       <button class="btn" id="btnClear">清除</button>
+      <button class="btn btn-primary" id="btnExport">匯出 Excel</button>
     </div>
     <div id="bookingsStatus" class="loading">載入中…</div>
   </section>
 
-  <!-- 訂房清單 -->
+  <!-- 訂單列表 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
+
     <div style="overflow-x:auto;">
       <table>
         <thead>
           <tr>
             <th>ID</th>
-            <th>建立時間</th>
+            <th>建立</th>
             <th>姓名</th>
             <th>手機</th>
             <th>館別</th>
@@ -144,6 +123,7 @@
             <th>備註</th>
             <th>狀態</th>
             <th>收款</th>
+            <th>更新</th>
           </tr>
         </thead>
         <tbody id="bookingBody"></tbody>
@@ -154,122 +134,168 @@
 </div>
 
 <script>
-const API_URL   =
- "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec"; // ← 用你目前部署好的 Web App URL
+// ======== API 設定 ========
+const API_URL =
+ "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 
-// 日期格式化
-function formatDateOnly(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return String(value);
-  const y  = d.getFullYear();
-  const m  = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
+// 日期處理
+function formatDateOnly(v) {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
 // 讀取全部訂單
 async function loadBookings() {
   const statusEl = document.getElementById("bookingsStatus");
-  statusEl.className = "loading";
   statusEl.textContent = "載入中…";
 
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "getAllBookings",
-        admin_key: ADMIN_KEY
-      })
-    });
+  const res = await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      action:"getAllBookings",
+      admin_key:ADMIN_KEY
+    })
+  });
 
-    const data = await res.json();
-    console.log("getAllBookings 回傳", data);
+  const json = await res.json();
 
-    if (!data.success) {
-      throw new Error(data.error || "API 回傳失敗");
-    }
-
-    allBookings = Array.isArray(data.bookings) ? data.bookings : [];
-    statusEl.className = "loading";
-    statusEl.textContent = `共 ${allBookings.length} 筆訂房資料`;
-
-    renderTable();
-
-  } catch (err) {
-    console.error("loadBookings 失敗", err);
-    statusEl.className = "error";
-    statusEl.textContent = "讀取訂房資料失敗，請稍後再試。";
+  if (!json.success) {
+    statusEl.textContent = "讀取失敗：" + json.error;
+    return;
   }
+
+  allBookings = json.bookings;
+  statusEl.textContent = `共 ${allBookings.length} 筆`;
+
+  renderTable();
 }
 
-// 繪製表格 + 關鍵字過濾
-function renderTable(keyword = "") {
+
+// 渲染表格
+function renderTable(keyword="") {
   const tbody = document.getElementById("bookingBody");
   tbody.innerHTML = "";
 
   const kw = keyword.trim().toLowerCase();
 
-  const filtered = allBookings.filter(b => {
+  const data = allBookings.filter(b => {
     if (!kw) return true;
-    const fields = [
-      b.id,
-      b.name,
-      b.phone,
-      b.house,
-      b.date,
-      b.note,
-      b.status,
-      b.payment
-    ].filter(Boolean).map(x => String(x).toLowerCase());
-    return fields.some(x => x.includes(kw));
+    return Object.values(b).some(v => String(v).toLowerCase().includes(kw));
   });
 
-  filtered.forEach(b => {
+  data.forEach(b => {
     const tr = document.createElement("tr");
 
-    const createdAtStr = b.createdAt
-      ? new Date(b.createdAt).toLocaleString("zh-TW")
-      : "";
-
     tr.innerHTML = `
-      <td>${b.id || ""}</td>
-      <td>${createdAtStr}</td>
-      <td>${b.name || ""}</td>
-      <td>${b.phone || ""}</td>
-      <td>${b.house || ""}</td>
-      <td>${formatDateOnly(b.date) || ""}</td>
-      <td>${b.nights || ""}</td>
-      <td>${b.adult || ""}</td>
-      <td>${b.child || ""}</td>
-      <td>${b.pet || ""}</td>
-      <td>${b.note || ""}</td>
-      <td>${b.status || ""}</td>
-      <td>${b.payment || ""}</td>
-    `;
+      <td>${b.id}</td>
+      <td>${b.createdAt}</td>
+      <td><input type="text" value="${b.name}" data-field="name"></td>
+      <td><input type="text" value="${b.phone}" data-field="phone"></td>
+      <td>${b.house}</td>
+      <td>${formatDateOnly(b.date)}</td>
+      <td>${b.nights}</td>
+      <td>${b.adult}</td>
+      <td>${b.child}</td>
+      <td><input type="text" value="${b.pet}" data-field="pet"></td>
+      <td><input type="text" value="${b.note}" data-field="note"></td>
 
+      <td>
+        <select data-field="status">
+          <option ${b.status=="待確認"?"selected":""}>待確認</option>
+          <option ${b.status=="已確認"?"selected":""}>已確認</option>
+          <option ${b.status=="已入住"?"selected":""}>已入住</option>
+          <option ${b.status=="已取消"?"selected":""}>已取消</option>
+        </select>
+      </td>
+
+      <td>
+        <select data-field="payment">
+          <option ${b.payment=="未收款"?"selected":""}>未收款</option>
+          <option ${b.payment=="已收訂金"?"selected":""}>已收訂金</option>
+          <option ${b.payment=="已收尾款"?"selected":""}>已收尾款</option>
+        </select>
+      </td>
+
+      <td>
+        <button class="btn btn-primary" onclick='updateBooking("${b.id}", this)'>更新</button>
+      </td>
+    `;
     tbody.appendChild(tr);
   });
 }
 
-// 搜尋按鈕
-document.getElementById("btnSearch").addEventListener("click", () => {
-  const kw = document.getElementById("keyword").value;
-  renderTable(kw);
+
+// 更新訂單
+async function updateBooking(id, btn) {
+  const tr = btn.closest("tr");
+  const inputs = tr.querySelectorAll("input, select");
+
+  const payload = { id, action:"updateBooking", admin_key:ADMIN_KEY };
+
+  inputs.forEach(el => {
+    payload[el.dataset.field] = el.value;
+  });
+
+  btn.textContent = "更新中…";
+  btn.disabled = true;
+
+  const res = await fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify(payload)
+  });
+
+  const json = await res.json();
+
+  if (json.success) {
+    btn.textContent = "完成";
+    setTimeout(()=>{ btn.textContent="更新"; btn.disabled=false },800);
+  } else {
+    btn.textContent="失敗";
+    alert("更新失敗：" + json.error);
+    btn.disabled=false;
+  }
+}
+
+
+// 匯出 Excel
+document.getElementById("btnExport").addEventListener("click", () => {
+  const rows = [
+    ["ID","建立","姓名","手機","館別","入住日","天數","大人","小孩","寵物","備註","狀態","收款"],
+    ...allBookings.map(b => [
+      b.id, b.createdAt, b.name, b.phone, b.house,
+      b.date, b.nights, b.adult, b.child, b.pet, b.note, b.status, b.payment
+    ])
+  ];
+
+  let csv = "";
+  rows.forEach(r => csv += r.join(",") + "\n");
+
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "bookings.csv";
+  a.click();
 });
 
-// 清除按鈕
-document.getElementById("btnClear").addEventListener("click", () => {
-  document.getElementById("keyword").value = "";
+// 搜尋
+document.getElementById("btnSearch").addEventListener("click",()=>{
+  renderTable(document.getElementById("keyword").value);
+});
+
+document.getElementById("btnClear").addEventListener("click",()=>{
+  document.getElementById("keyword").value="";
   renderTable("");
 });
 
-// 起始載入
+// 初始化
 loadBookings();
-</script>
 
+</script>
 </body>
 </html>
