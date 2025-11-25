@@ -145,7 +145,7 @@ async function loadBookings() {
 
 
 /* ---------------------------
-    渲染表格（已改版）
+    渲染表格（改為可切換「顯示/編輯模式」）
 ---------------------------- */
 function renderTable(keyword="") {
   const tbody = document.getElementById("bookingBody");
@@ -160,15 +160,19 @@ function renderTable(keyword="") {
 
   data.forEach(b => {
     const tr = document.createElement("tr");
+    tr.dataset.id = b.id;
 
     tr.innerHTML = `
       <td>${b.id}</td>
       <td>${b.createdAt}</td>
-      <td><input type="text" value="${b.name}" disabled></td>
-      <td><input type="text" value="${b.phone}" disabled></td>
+      <td>${b.name}</td>
+      <td>${b.phone}</td>
 
-      <!-- 館別（下拉） -->
-      <td>
+      <!-- 館別 -->
+      <td class="view-${b.id}">
+        ${b.house}
+      </td>
+      <td class="edit-${b.id}" style="display:none">
         <select data-field="house">
           <option ${b.house=="A館"?"selected":""}>A館</option>
           <option ${b.house=="B館"?"selected":""}>B館</option>
@@ -176,20 +180,46 @@ function renderTable(keyword="") {
         </select>
       </td>
 
-      <!-- 入住日期（date picker） -->
-      <td>
+      <!-- 入住日期 -->
+      <td class="view-${b.id}">
+        ${formatDateOnly(b.date)}
+      </td>
+      <td class="edit-${b.id}" style="display:none">
         <input type="date" value="${formatDateOnly(b.date)}" data-field="date">
       </td>
 
-      <!-- 數字輸入 -->
-      <td><input type="number" min="1" value="${b.nights}" data-field="nights"></td>
-      <td><input type="number" min="1" value="${b.adult}" data-field="adult"></td>
-      <td><input type="number" min="0" value="${b.child}" data-field="child"></td>
+      <!-- 天數 -->
+      <td class="view-${b.id}">${b.nights}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="number" min="1" value="${b.nights}" data-field="nights">
+      </td>
 
-      <td><input type="text" value="${b.pet}" data-field="pet"></td>
-      <td><input type="text" value="${b.note}" disabled></td>
+      <!-- 大人 -->
+      <td class="view-${b.id}">${b.adult}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="number" min="1" value="${b.adult}" data-field="adult">
+      </td>
 
-      <td>
+      <!-- 小孩 -->
+      <td class="view-${b.id}">${b.child}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="number" min="0" value="${b.child}" data-field="child">
+      </td>
+
+      <!-- 寵物 -->
+      <td class="view-${b.id}">${b.pet}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="text" value="${b.pet}" data-field="pet">
+      </td>
+
+      <!-- 備註（不可編輯） -->
+      <td>${b.note}</td>
+
+      <!-- 狀態（紅字） -->
+      <td style="color:#d32f2f" class="view-${b.id}">
+        ${b.status}
+      </td>
+      <td class="edit-${b.id}" style="display:none">
         <select data-field="status">
           <option ${b.status=="待確認"?"selected":""}>待確認</option>
           <option ${b.status=="已確認"?"selected":""}>已確認</option>
@@ -198,7 +228,11 @@ function renderTable(keyword="") {
         </select>
       </td>
 
-      <td>
+      <!-- 收款（藍字） -->
+      <td style="color:#007bff" class="view-${b.id}">
+        ${b.payment}
+      </td>
+      <td class="edit-${b.id}" style="display:none">
         <select data-field="payment">
           <option ${b.payment=="未收款"?"selected":""}>未收款</option>
           <option ${b.payment=="已收訂金"?"selected":""}>已收訂金</option>
@@ -207,7 +241,7 @@ function renderTable(keyword="") {
       </td>
 
       <td>
-        <button class="btn btn-primary" onclick='updateBooking("${b.id}", this)'>更新</button>
+        <button class="btn btn-primary" onclick='toggleEdit("${b.id}", this)'>修改</button>
       </td>
     `;
 
@@ -217,11 +251,32 @@ function renderTable(keyword="") {
 
 
 /* ---------------------------
+    修改 / 儲存 切換
+---------------------------- */
+function toggleEdit(id, btn) {
+  const isEditing = btn.textContent === "儲存";
+
+  const viewEls = document.querySelectorAll(`.view-${id}`);
+  const editEls = document.querySelectorAll(`.edit-${id}`);
+
+  if (!isEditing) {
+    // 進入編輯模式
+    viewEls.forEach(el => el.style.display = "none");
+    editEls.forEach(el => el.style.display = "table-cell");
+    btn.textContent = "儲存";
+  } else {
+    // 儲存資料
+    updateBooking(id, btn);
+  }
+}
+
+
+/* ---------------------------
     更新訂單資料
 ---------------------------- */
 async function updateBooking(id, btn) {
   const tr = btn.closest("tr");
-  const inputs = tr.querySelectorAll("[data-field]");
+  const inputs = tr.querySelectorAll(".edit-" + id + " [data-field]");
 
   const payload = {
     id,
@@ -229,12 +284,9 @@ async function updateBooking(id, btn) {
     admin_key: ADMIN_KEY
   };
 
-  inputs.forEach(el => {
-    payload[el.dataset.field] = el.value;
-  });
+  inputs.forEach(el => payload[el.dataset.field] = el.value);
 
   btn.textContent = "更新中…";
-  btn.disabled = true;
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -244,16 +296,31 @@ async function updateBooking(id, btn) {
 
   if (json.success) {
     btn.textContent = "完成";
+
+    // 更新畫面
+    const updated = allBookings.find(b => b.id == id);
+    if (updated) {
+      updated.house = payload.house;
+      updated.date = payload.date;
+      updated.nights = payload.nights;
+      updated.adult = payload.adult;
+      updated.child = payload.child;
+      updated.pet = payload.pet;
+      updated.status = payload.status;
+      updated.payment = payload.payment;
+    }
+
     setTimeout(() => {
-      btn.textContent = "更新";
-      btn.disabled = false;
-    }, 600);
+      // 回復顯示模式
+      renderTable(document.getElementById("keyword").value);
+    }, 500);
+
   } else {
-    btn.textContent = "失敗";
+    btn.textContent = "修改";
     alert("更新失敗：" + json.error);
-    btn.disabled = false;
   }
 }
+
 
 
 /* 其他按鈕 */
