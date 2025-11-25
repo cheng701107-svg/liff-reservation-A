@@ -25,13 +25,14 @@
     padding: 16px;
   }
 
-  /* 搜尋 */
   .section {
     background: #fff;
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 20px;
   }
+
+  /* 搜尋列 */
   .search-row {
     display: flex;
     gap: 8px;
@@ -41,20 +42,12 @@
     flex: 1;
     min-width: 200px;
     padding: 10px 12px;
-    font-size: 16px;
     border-radius: 8px;
     border: 1px solid #ccc;
   }
-  .btn {
-    padding: 8px 12px;
-    font-size: 14px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .btn-primary { background: #06c755; color:#fff; }
-  .btn-danger { background:#d32f2f; color:#fff; }
+
+  .btn { padding: 8px 12px; border-radius: 8px; cursor: pointer; border: none; }
+  .btn-primary { background:#06c755; color:#fff; }
 
   /* 表格 */
   table {
@@ -62,25 +55,19 @@
     border-collapse: collapse;
     background: #fff;
     border-radius: 10px;
-    overflow: hidden;
   }
-  thead {
-    background: #00b33c;
-    color: #fff;
-  }
+  thead { background:#00b33c; color:#fff; }
   th, td {
-    padding: 10px 6px;
+    padding: 8px 6px;
     font-size: 14px;
     text-align: center;
     border-bottom: 1px solid #eee;
   }
-  tbody tr:last-child td { border-bottom: none; }
-
-  select, input[type='text'] {
-    padding: 4px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+  input, select {
     width: 95%;
+    padding: 4px;
+    border-radius: 5px;
+    border: 1px solid #bbb;
   }
 </style>
 </head>
@@ -90,7 +77,6 @@
 
 <div class="wrapper">
 
-  <!-- 搜尋 -->
   <section class="section">
     <h2>🔍 搜尋訂房資料</h2>
     <div class="search-row">
@@ -99,10 +85,10 @@
       <button class="btn" id="btnClear">清除</button>
       <button class="btn btn-primary" id="btnExport">匯出 Excel</button>
     </div>
-    <div id="bookingsStatus" class="loading">載入中…</div>
+    <div id="bookingsStatus">載入中…</div>
   </section>
 
-  <!-- 訂單列表 -->
+  <!-- 訂單表 -->
   <section class="section">
     <h2>📋 訂房清單</h2>
 
@@ -134,48 +120,33 @@
 </div>
 
 <script>
-// ======== API 設定 ========
 const API_URL =
  "https://script.google.com/macros/s/AKfycbz5HEyUZi1MskWO4LRaEuBUfU03KX_9QxCI4DgcDcI7PwXB8J3tpV6GKZoJoNzuwjb7/exec";
 const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 
-// 日期處理
 function formatDateOnly(v) {
   const d = new Date(v);
   if (isNaN(d.getTime())) return v;
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
-// 讀取全部訂單
 async function loadBookings() {
-  const statusEl = document.getElementById("bookingsStatus");
-  statusEl.textContent = "載入中…";
-
   const res = await fetch(API_URL,{
     method:"POST",
-    body:JSON.stringify({
-      action:"getAllBookings",
-      admin_key:ADMIN_KEY
-    })
+    body:JSON.stringify({ action:"getAllBookings", admin_key:ADMIN_KEY })
   });
-
   const json = await res.json();
-
-  if (!json.success) {
-    statusEl.textContent = "讀取失敗：" + json.error;
-    return;
-  }
-
-  allBookings = json.bookings;
-  statusEl.textContent = `共 ${allBookings.length} 筆`;
-
+  allBookings = json.bookings || [];
+  document.getElementById("bookingsStatus").textContent = `共 ${allBookings.length} 筆`;
   renderTable();
 }
 
 
-// 渲染表格
+/* ---------------------------
+    渲染表格（已改版）
+---------------------------- */
 function renderTable(keyword="") {
   const tbody = document.getElementById("bookingBody");
   tbody.innerHTML = "";
@@ -193,15 +164,30 @@ function renderTable(keyword="") {
     tr.innerHTML = `
       <td>${b.id}</td>
       <td>${b.createdAt}</td>
-      <td><input type="text" value="${b.name}" data-field="name"></td>
-      <td><input type="text" value="${b.phone}" data-field="phone"></td>
-      <td>${b.house}</td>
-      <td>${formatDateOnly(b.date)}</td>
-      <td>${b.nights}</td>
-      <td>${b.adult}</td>
-      <td>${b.child}</td>
+      <td><input type="text" value="${b.name}" disabled></td>
+      <td><input type="text" value="${b.phone}" disabled></td>
+
+      <!-- 館別（下拉） -->
+      <td>
+        <select data-field="house">
+          <option ${b.house=="A館"?"selected":""}>A館</option>
+          <option ${b.house=="B館"?"selected":""}>B館</option>
+          <option ${b.house=="C館"?"selected":""}>C館</option>
+        </select>
+      </td>
+
+      <!-- 入住日期（date picker） -->
+      <td>
+        <input type="date" value="${formatDateOnly(b.date)}" data-field="date">
+      </td>
+
+      <!-- 數字輸入 -->
+      <td><input type="number" min="1" value="${b.nights}" data-field="nights"></td>
+      <td><input type="number" min="1" value="${b.adult}" data-field="adult"></td>
+      <td><input type="number" min="0" value="${b.child}" data-field="child"></td>
+
       <td><input type="text" value="${b.pet}" data-field="pet"></td>
-      <td><input type="text" value="${b.note}" data-field="note"></td>
+      <td><input type="text" value="${b.note}" disabled></td>
 
       <td>
         <select data-field="status">
@@ -224,17 +210,24 @@ function renderTable(keyword="") {
         <button class="btn btn-primary" onclick='updateBooking("${b.id}", this)'>更新</button>
       </td>
     `;
+
     tbody.appendChild(tr);
   });
 }
 
 
-// 更新訂單
+/* ---------------------------
+    更新訂單資料
+---------------------------- */
 async function updateBooking(id, btn) {
   const tr = btn.closest("tr");
-  const inputs = tr.querySelectorAll("input, select");
+  const inputs = tr.querySelectorAll("[data-field]");
 
-  const payload = { id, action:"updateBooking", admin_key:ADMIN_KEY };
+  const payload = {
+    id,
+    action: "updateBooking",
+    admin_key: ADMIN_KEY
+  };
 
   inputs.forEach(el => {
     payload[el.dataset.field] = el.value;
@@ -243,59 +236,52 @@ async function updateBooking(id, btn) {
   btn.textContent = "更新中…";
   btn.disabled = true;
 
-  const res = await fetch(API_URL,{
-    method:"POST",
+  const res = await fetch(API_URL, {
+    method: "POST",
     body: JSON.stringify(payload)
   });
-
   const json = await res.json();
 
   if (json.success) {
     btn.textContent = "完成";
-    setTimeout(()=>{ btn.textContent="更新"; btn.disabled=false },800);
+    setTimeout(() => {
+      btn.textContent = "更新";
+      btn.disabled = false;
+    }, 600);
   } else {
-    btn.textContent="失敗";
+    btn.textContent = "失敗";
     alert("更新失敗：" + json.error);
-    btn.disabled=false;
+    btn.disabled = false;
   }
 }
 
 
-// 匯出 Excel
-document.getElementById("btnExport").addEventListener("click", () => {
+/* 其他按鈕 */
+document.getElementById("btnSearch").addEventListener("click", ()=>{
+  renderTable(document.getElementById("keyword").value);
+});
+document.getElementById("btnClear").addEventListener("click", ()=>{
+  document.getElementById("keyword").value = "";
+  renderTable("");
+});
+document.getElementById("btnExport").addEventListener("click", ()=>{
   const rows = [
     ["ID","建立","姓名","手機","館別","入住日","天數","大人","小孩","寵物","備註","狀態","收款"],
-    ...allBookings.map(b => [
-      b.id, b.createdAt, b.name, b.phone, b.house,
-      b.date, b.nights, b.adult, b.child, b.pet, b.note, b.status, b.payment
+    ...allBookings.map(b=>[
+      b.id,b.createdAt,b.name,b.phone,b.house,b.date,b.nights,b.adult,b.child,b.pet,b.note,b.status,b.payment
     ])
   ];
-
-  let csv = "";
-  rows.forEach(r => csv += r.join(",") + "\n");
-
+  let csv = rows.map(r=>r.join(",")).join("\n");
   const blob = new Blob([csv], {type:"text/csv"});
-  const url = URL.createObjectURL(blob);
-
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = "bookings.csv";
   a.click();
 });
 
-// 搜尋
-document.getElementById("btnSearch").addEventListener("click",()=>{
-  renderTable(document.getElementById("keyword").value);
-});
-
-document.getElementById("btnClear").addEventListener("click",()=>{
-  document.getElementById("keyword").value="";
-  renderTable("");
-});
-
-// 初始化
+/* 初始化 */
 loadBookings();
-
 </script>
+
 </body>
 </html>
