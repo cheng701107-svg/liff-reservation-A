@@ -742,13 +742,14 @@ function clickCalendarDay(dateStr) {
   modal.style.display = "flex";
 }
 
-function closeModal(){
-    document.getElementById("modalOverlay").style.display = "none";
-    document.getElementById("modalBox").style.display = "none";
+function closeDayModal() {
+    const modal = document.getElementById("dayModal");
+    modal.style.display = "none";
 
-    // 🔵 恢復背景滾動
+    // 恢復背景滾動
     document.body.classList.remove("modal-open");
 }
+
 
  
 /* ============================
