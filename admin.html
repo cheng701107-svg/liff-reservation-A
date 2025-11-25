@@ -103,6 +103,17 @@
   .pay-final { color:#007bff; font-weight:700; }
   .pay-full { color:#2e7d32; font-weight:700; }
 
+  /* 手機版：表格左右滑動 */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; 
+}
+
+.table-wrapper table {
+  min-width: 1200px; /* 防止欄位被擠壓 */
+}
+
 </style>
 </head>
 
@@ -172,7 +183,7 @@
   <section class="section">
     <h2>📋 訂房清單</h2>
 
-    <div>
+   <div class="table-wrapper">
       <table>
         <thead>
           <tr>
