@@ -114,6 +114,22 @@
   min-width: 1200px; /* 防止欄位被擠壓 */
 }
 
+  /* 固定第一欄（姓名） */
+@media (max-width: 768px) {
+  th:nth-child(3), td:nth-child(3) {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 20;
+  }
+
+  /* 避免表格壓住姓名欄，給背景 */
+  th:nth-child(3) {
+    background: #00b33c;
+    color: #fff;
+  }
+}
+
 </style>
 </head>
 
