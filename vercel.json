@@ -1,0 +1,11 @@
+{
+  "routes": [
+    {
+      "src": "/admin.html",
+      "headers": {
+        "WWW-Authenticate": "Basic realm=\"Restricted\""
+      },
+      "status": 401
+    }
+  ]
+}
