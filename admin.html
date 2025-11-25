@@ -130,6 +130,52 @@
   }
 }
 
+  /* ============ 修正手機版 Modal 置中 + 避免被 table 擠走 ============ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.45);
+  z-index: 9998;
+  backdrop-filter: blur(2px);
+}
+
+.modal-box {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 92%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 14px;
+  z-index: 9999;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+}
+
+/* 避免背景滾動 */
+body.modal-open {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* iOS 鍵盤彈出時仍保持置中 */
+@supports (-webkit-touch-callout: none) {
+  .modal-box {
+    position: absolute;
+  }
+}
+
+  body.modal-open {
+  overflow: hidden;
+  height: 100vh;
+  position: fixed;
+  width: 100%;
+}
+
 </style>
 </head>
 
@@ -671,6 +717,11 @@ function clickCalendarDay(dateStr) {
   const modal = document.getElementById("dayModal");
   const title = document.getElementById("modalTitle");
   const content = document.getElementById("modalContent");
+   // 🟢 防止背景滾動 + 修正手機版本位移
+  document.body.classList.add("modal-open");
+
+  modal.style.display = "block";
+  modal.classList.add("show");
 
   title.textContent = `📅 ${dateStr} — 訂單列表`;
 
@@ -691,9 +742,14 @@ function clickCalendarDay(dateStr) {
   modal.style.display = "flex";
 }
 
-function closeDayModal() {
-  document.getElementById("dayModal").style.display = "none";
+function closeModal(){
+    document.getElementById("modalOverlay").style.display = "none";
+    document.getElementById("modalBox").style.display = "none";
+
+    // 🔵 恢復背景滾動
+    document.body.classList.remove("modal-open");
 }
+
  
 /* ============================
     初始化
