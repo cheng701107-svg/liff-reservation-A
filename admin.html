@@ -275,11 +275,12 @@ body.modal-open {
   <!-- 表格 -->
   <section class="section">
     <!-- ➕ 新增訂單 -->
-<section class="section">
-  <button class="btn btn-primary" onclick="openCreateModal()">➕ 新增訂單</button>
-</section>
-
-    <h2>📋 訂房清單</h2>
+<h2 style="display:flex; justify-content:space-between; align-items:center;">
+  <span>📋 訂房清單</span>
+  <button class="btn btn-primary" id="btnOpenCreate" style="padding:6px 10px;">
+    ＋ 新增訂單
+  </button>
+</h2>
 
    <div class="table-wrapper">
       <table>
