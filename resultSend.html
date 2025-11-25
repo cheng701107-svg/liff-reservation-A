@@ -2,206 +2,407 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>預訂完成</title>
+<title>靖寬靖廣 — 管理後台</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
   body {
-    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    font-family: "Noto Sans TC","Microsoft JhengHei", sans-serif;
     margin: 0;
     background: #f5f5f5;
   }
   header {
     background: #06c755;
-    color: white;
+    color: #fff;
     padding: 16px;
-    font-size: 22px;
-    text-align: center;
+    font-size: 24px;
     font-weight: 900;
+    text-align: center;
   }
-  .container {
-    max-width: 560px;
+  .wrapper {
+    max-width: 1300px;
     margin: 0 auto;
     padding: 16px;
   }
-  .card {
+
+  .section {
     background: #fff;
-    border-radius: 16px;
-    padding: 18px 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
   }
-  h2 {
-    margin: 0 0 12px;
-    font-size: 18px;
+
+  /* 搜尋列 */
+  .search-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
-  .status {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 12px;
+  .search-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
   }
-  pre {
-    background: #f0f0f0;
-    padding: 12px;
-    border-radius: 10px;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-size: 14px;
-  }
+
   .btn {
-    width: 100%;
-    padding: 12px;
-    background: #06c755;
-    color: white;
-    border-radius: 999px;
-    font-size: 16px;
-    font-weight: 700;
-    margin-top: 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
     border: none;
+  }
+  .btn-primary { background:#06c755; color:#fff; }
+
+  /* 表格 */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 10px;
+  }
+  th, td {
+    padding: 8px 6px;
+    font-size: 14px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+  }
+  thead {
+    background: #00b33c;
+    color: #fff;
+  }
+
+  th.sortable {
     cursor: pointer;
   }
+
+  input, select {
+    width: 95%;
+    padding: 4px;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+  }
+
+  /* 狀態顏色 */
+  .status-ok { color:#06c755; font-weight:700; }
+  .status-wait { color:#f57c00; font-weight:700; }
+  .status-cancel { color:#d32f2f; font-weight:700; }
+  .status-hold { color:#9C27B0; font-weight:700; }
+  .status-checkout { color:#283593; font-weight:700; }
+
+  /* 收款顏色 */
+  .pay-none { color:#666; font-weight:700; }
+  .pay-deposit { color:#f57c00; font-weight:700; }
+  .pay-final { color:#007bff; font-weight:700; }
+  .pay-full { color:#2e7d32; font-weight:700; }
+
 </style>
 </head>
 
 <body>
-<header>預訂完成</header>
+<header>靖寬靖廣 — 管理後台</header>
 
-<div class="container">
-  <div class="card">
-    <h2>您的預訂已送出</h2>
-    <div id="status" class="status">正在傳送預訂摘要到您的 LINE 聊天室…</div>
-    <pre id="summaryBox"></pre>
-    <button class="btn" id="closeBtn">關閉視窗</button>
-  </div>
+<div class="wrapper">
+
+  <section class="section">
+    <h2>🔍 搜尋訂房資料</h2>
+    <div class="search-row">
+      <input id="keyword" type="text" placeholder="輸入姓名、手機、館別、入住日期…" />
+      <button class="btn btn-primary" id="btnSearch">搜尋</button>
+      <button class="btn" id="btnClear">清除</button>
+      <button class="btn btn-primary" id="btnExport">匯出 Excel</button>
+    </div>
+    <div id="bookingsStatus">載入中…</div>
+  </section>
+
+  <!-- 訂單表 -->
+  <section class="section">
+    <h2>📋 訂房清單</h2>
+
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>建立</th>
+            <th>姓名</th>
+            <th>手機</th>
+            <th>館別</th>
+
+            <!-- ★★★ 可排序欄位 ★★★ -->
+            <th class="sortable" data-sort="date">入住日 ⬍</th>
+            <th>天數</th>
+            <th>大人</th>
+            <th>小孩</th>
+            <th>寵物</th>
+            <th>備註</th>
+
+            <th class="sortable" data-sort="status">狀態 ⬍</th>
+            <th class="sortable" data-sort="payment">收款 ⬍</th>
+
+            <th>更新</th>
+          </tr>
+        </thead>
+        <tbody id="bookingBody"></tbody>
+      </table>
+    </div>
+
+  </section>
 </div>
 
 <script>
-const LIFF_ID = "2008409020-k4Oy7Y0D";  // 你的 LIFF ID
+const API_URL =
+ "https://script.google.com/macros/s/AKfycbxAhWFD3rLv2O1RSnmEA3EJjXIK5vFKja4IHGtL8EW3q-6ZD77K1Emc_ryFAK1fOZKA/exec";
+const ADMIN_KEY = "admin2025";
 
-/* ---------------------------------------------------
-   取得 URL 參數（booking-form 跳轉帶過來的資料）
---------------------------------------------------- */
-function getQuery() {
-  const p = new URLSearchParams(location.search);
-  return {
-    id:     p.get("id"),
-    name:   p.get("name")   || "",
-    phone:  p.get("phone")  || "",
-    house:  p.get("house")  || "",
-    date:   p.get("date")   || "",
-    nights: p.get("nights") || "",
-    adult:  p.get("adult")  || "",
-    child:  p.get("child")  || "",
-    pet:    p.get("pet")    || "",
-    note:   p.get("note")   || ""
-  };
+let allBookings = [];
+let sortState = { date: "desc", status: "none", payment: "none" };
+
+/* 狀態顏色 */
+function statusClass(s){
+  s = (s||"").trim();
+  if(["已訂房","已入住","完成","已確認"].includes(s)) return "status-ok";
+  if(["待確認","處理中"].includes(s)) return "status-wait";
+  if(["已取消","取消"].includes(s)) return "status-cancel";
+  if(["保留中"].includes(s)) return "status-hold";
+  if(["已退房"].includes(s)) return "status-checkout";
+  return "status-wait";
 }
 
-/* ---------------------------------------------------
-   Flex row function
---------------------------------------------------- */
-function row(label, value) {
-  return {
-    type: "box",
-    layout: "baseline",
-    spacing: "sm",
-    contents: [
-      { type: "text", text: label, color: "#999999", size: "sm", flex: 3 },
-      { type: "text", text: value, color: "#333333", size: "sm", flex: 5, wrap: true }
-    ]
-  };
+/* 收款顏色 */
+function payClass(s){
+  if(s==="已收全額") return "pay-full";
+  if(s==="已收尾款") return "pay-final";
+  if(s==="已收訂金") return "pay-deposit";
+  return "pay-none";
 }
 
-document.getElementById("closeBtn").addEventListener("click", () => {
-  if (liff.isInClient()) liff.closeWindow();
-  else window.close();
-});
+function formatDateOnly(v){
+  const d=new Date(v);
+  if(isNaN(d.getTime())) return v;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 
-/* ---------------------------------------------------
-   主流程：初始化 LIFF → 傳送 Flex → 顯示摘要
---------------------------------------------------- */
-document.addEventListener("DOMContentLoaded", async () => {
-  const q = getQuery();
-
-  // 顯示文字摘要
-  const summaryText =
-`預訂摘要
-訂單編號：${q.id}
-姓名：${q.name}
-手機：${q.phone}
-館別：${q.house}
-入住日：${q.date}
-住宿：${q.nights} 晚
-人數：大人 ${q.adult} 位 / 小孩 ${q.child} 位
-寵物：${q.pet || "無"}
-備註：${q.note || "無"}
-
-管家確認後，狀態會更新為「已訂房」，即完成預訂。`;
-
-  document.getElementById("summaryBox").textContent = summaryText;
-
-  try {
-    await liff.init({ liffId: LIFF_ID });
-
-    if (!liff.isInClient()) {
-      document.getElementById("status").textContent =
-        "⚠ 您不是在 LINE App 中開啟，因此無法自動傳送圖卡。請自行截圖保存。";
-      return;
-    }
-
-    /* ---------------------------------------------------
-       Flex 圖卡內容
-    --------------------------------------------------- */
-    const flex = {
-      type: "bubble",
-      size: "mega",
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "md",
-        contents: [
-          {
-            type: "text",
-            text: "預訂成功",
-            weight: "bold",
-            size: "lg",
-            color: "#06c755"
-          },
-          { type: "separator", margin: "md" },
-          row("訂單編號", q.id),
-          row("姓名", q.name),
-          row("手機", q.phone),
-          row("館別", q.house),
-          row("入住日", q.date),
-          row("住宿", q.nights + " 晚"),
-          row("人數", `大人 ${q.adult} / 小孩 ${q.child}`),
-          row("寵物", q.pet || "無"),
-          row("備註", q.note || "無")
-        ]
-      }
-    };
-
-    /* ---------------------------------------------------
-       送出 Flex → 使用 sendMessages（完全不扣額度）
-    --------------------------------------------------- */
-    await liff.sendMessages([
-      {
-        type: "flex",
-        altText: "預訂摘要",
-        contents: flex
-      }
-    ]);
-
-    document.getElementById("status").textContent =
-      "✔ 預訂摘要已傳送至您的 LINE 聊天室";
-
-  } catch (err) {
-    console.error("sendMessages 錯誤：", err);
-    document.getElementById("status").textContent =
-      "預訂已送出，但傳送 LINE 圖卡失敗，請自行截圖保存摘要。";
+/* ★★★ 排序功能 ★★★ */
+function sortData(data){
+  if(sortState.date !== "none"){
+    data.sort((a,b)=>{
+      const da = new Date(a.date);
+      const db = new Date(b.date);
+      return sortState.date === "asc" ? da - db : db - da;
+    });
   }
+
+  if(sortState.status !== "none"){
+    data.sort((a,b)=>{
+      return sortState.status === "asc"
+        ? a.status.localeCompare(b.status, "zh-Hant")
+        : b.status.localeCompare(a.status, "zh-Hant");
+    });
+  }
+
+  if(sortState.payment !== "none"){
+    data.sort((a,b)=>{
+      return sortState.payment === "asc"
+        ? a.payment.localeCompare(b.payment, "zh-Hant")
+        : b.payment.localeCompare(a.payment, "zh-Hant");
+    });
+  }
+
+  return data;
+}
+
+/* 點欄位切換排序 */
+document.addEventListener("click", e=>{
+  if(!e.target.classList.contains("sortable")) return;
+
+  const key = e.target.dataset.sort;
+
+  // 切換 asc / desc
+  sortState[key] = sortState[key] === "asc" ? "desc" : "asc";
+
+  renderTable(document.getElementById("keyword").value);
 });
+
+/* 讀取資料 */
+async function loadBookings(){
+  const res = await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({action:"getAllBookings", admin_key:ADMIN_KEY})
+  });
+  const json = await res.json();
+  allBookings = json.bookings || [];
+
+  document.getElementById("bookingsStatus").textContent =
+    `共 ${allBookings.length} 筆`;
+
+  renderTable();
+}
+
+/* 渲染表格 */
+function renderTable(keyword=""){
+  const tbody = document.getElementById("bookingBody");
+  tbody.innerHTML="";
+
+  const kw = keyword.trim().toLowerCase();
+  let data = allBookings.filter(b => !kw || JSON.stringify(b).toLowerCase().includes(kw));
+
+  /* ★★★ 套用排序 ★★★ */
+  data = sortData(data);
+
+  data.forEach(b=>{
+    const tr = document.createElement("tr");
+    tr.dataset.id=b.id;
+
+    tr.innerHTML = `
+      <td>${b.id}</td>
+      <td>${b.createdAt}</td>
+      <td>${b.name}</td>
+      <td>${b.phone}</td>
+
+      <td class="view-${b.id}">${b.house}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <select data-field="house">
+          <option ${b.house=="A館"?"selected":""}>A館</option>
+          <option ${b.house=="B館"?"selected":""}>B館</option>
+          <option ${b.house=="C館"?"selected":""}>C館</option>
+        </select>
+      </td>
+
+      <td class="view-${b.id}">${formatDateOnly(b.date)}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="date" value="${formatDateOnly(b.date)}" data-field="date">
+      </td>
+
+      <td class="view-${b.id}">${b.nights}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="number" min="1" value="${b.nights}" data-field="nights">
+      </td>
+
+      <td class="view-${b.id}">${b.adult}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="number" min="1" value="${b.adult}" data-field="adult">
+      </td>
+
+      <td class="view-${b.id}">${b.child}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="number" min="0" value="${b.child}" data-field="child">
+      </td>
+
+      <td class="view-${b.id}">${b.pet}</td>
+      <td class="edit-${b.id}" style="display:none">
+        <input type="text" value="${b.pet}" data-field="pet">
+      </td>
+
+      <td>${b.note}</td>
+
+      <td class="view-${b.id}">
+        <span class="${statusClass(b.status)}">${b.status}</span>
+      </td>
+      <td class="edit-${b.id}" style="display:none">
+        <select data-field="status">
+          <option>待確認</option>
+          <option>已確認</option>
+          <option>已入住</option>
+          <option>已取消</option>
+          <option>保留中</option>
+          <option>已退房</option>
+        </select>
+      </td>
+
+      <td class="view-${b.id}">
+        <span class="${payClass(b.payment)}">${b.payment}</span>
+      </td>
+      <td class="edit-${b.id}" style="display:none">
+        <select data-field="payment">
+          <option>未收款</option>
+          <option>已收訂金</option>
+          <option>已收尾款</option>
+          <option>已收全額</option>
+        </select>
+      </td>
+
+      <td>
+        <button class="btn btn-primary" onclick='toggleEdit("${b.id}", this)'>修改</button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* 修改功能 */
+function toggleEdit(id, btn){
+  const editing = btn.textContent === "儲存";
+  const views = document.querySelectorAll(`.view-${id}`);
+  const edits = document.querySelectorAll(`.edit-${id}`);
+
+  if(!editing){
+    views.forEach(el=>el.style.display="none");
+    edits.forEach(el=>el.style.display="table-cell");
+    btn.textContent="儲存";
+  } else {
+    updateBooking(id, btn);
+  }
+}
+
+async function updateBooking(id, btn){
+  const tr = btn.closest("tr");
+  const inputs = tr.querySelectorAll(`.edit-${id} [data-field]`);
+  const data = { id, action:"updateBooking", admin_key:ADMIN_KEY };
+
+  inputs.forEach(el => data[el.dataset.field] = el.value);
+
+  btn.textContent="更新中…";
+
+  const res = await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify(data)
+  });
+  const json = await res.json();
+
+  if(json.success){
+    Object.assign(allBookings.find(x=>x.id==id), data);
+
+    btn.textContent="完成";
+    setTimeout(()=>{
+      renderTable(document.getElementById("keyword").value);
+    },400);
+  } else {
+    btn.textContent="修改";
+    alert("更新失敗："+json.error);
+  }
+}
+
+/* 查詢 */
+document.getElementById("btnSearch").addEventListener("click",()=>{
+  renderTable(document.getElementById("keyword").value);
+});
+document.getElementById("btnClear").addEventListener("click",()=>{
+  document.getElementById("keyword").value="";
+  renderTable("");
+});
+
+/* 匯出 CSV */
+document.getElementById("btnExport").addEventListener("click",()=>{
+  const rows=[
+    ["ID","建立","姓名","手機","館別","入住日","天數","大人","小孩","寵物","備註","狀態","收款"],
+    ...allBookings.map(b=>[
+      b.id,b.createdAt,b.name,b.phone,b.house,b.date,
+      b.nights,b.adult,b.child,b.pet,b.note,b.status,b.payment
+    ])
+  ];
+  let csv = rows.map(r=>r.join(",")).join("\n");
+  const blob = new Blob([csv],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="bookings.csv";
+  a.click();
+});
+
+/* 初始化 */
+loadBookings();
 </script>
 
 </body>
