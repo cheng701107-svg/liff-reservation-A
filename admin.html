@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>靖寬靖廣 — 管理後台（完整版）</title>
+<title>靖寬靖廣 — 管理後台（手機版優化）</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
@@ -54,20 +54,57 @@
   }
   .btn-primary { background:#06c755; color:#fff; }
 
-  /* 表格 */
+  /* ===============================
+       表格（桌機 + 手機 + 固定欄位）
+     =============================== */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   table {
-    width: 100%;
+    width: 1300px;
     border-collapse: collapse;
     background: #fff;
     border-radius: 10px;
+    min-width: 1200px;
   }
-  thead { background:#00b33c; color:#fff; }
+
+  thead {
+    background:#00b33c;
+    color:#fff;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
   th, td {
     padding: 8px 6px;
     font-size: 14px;
     text-align: center;
     border-bottom: 1px solid #eee;
+    white-space: nowrap;
   }
+
+  /* 固定左側 ID 欄位 */
+  td:first-child, th:first-child {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 15;
+    font-weight: 700;
+  }
+  th:first-child {
+    background: #00b33c;
+    color:#fff;
+  }
+
+  /* 手機版縮小字體 */
+  @media (max-width: 768px) {
+    th, td { font-size: 12px; padding: 6px 4px; }
+    table { min-width: 950px; }
+  }
+
   input, select {
     width: 95%;
     padding: 4px;
@@ -88,7 +125,7 @@
 </head>
 
 <body>
-<header>靖寬靖廣 — 管理後台</header>
+<header>靖寬靖廣 — 管理後台（手機優化）</header>
 
 <div class="wrapper">
 
@@ -105,9 +142,9 @@
 
   <!-- 訂單表 -->
   <section class="section">
-    <h2>📋 訂房清單</h2>
+    <h2>📋 訂房清單（手機可滑動＋固定欄位）</h2>
 
-    <div style="overflow-x:auto;">
+    <div class="table-container">
       <table>
         <thead>
           <tr>
@@ -141,7 +178,7 @@ const ADMIN_KEY = "admin2025";
 
 let allBookings = [];
 
-/* 狀態顏色（與前台一致） */
+/* 狀態顏色 */
 function statusColor(s) {
   if (!s) return "wait";
   s = s.trim();
@@ -200,9 +237,7 @@ function renderTable(keyword="") {
       <td>${b.phone}</td>
 
       <!-- 館別 -->
-      <td class="view-${b.id}">
-        ${b.house}
-      </td>
+      <td class="view-${b.id}">${b.house}</td>
       <td class="edit-${b.id}" style="display:none">
         <select data-field="house">
           <option ${b.house=="A館"?"selected":""}>A館</option>
@@ -212,9 +247,7 @@ function renderTable(keyword="") {
       </td>
 
       <!-- 入住日期 -->
-      <td class="view-${b.id}">
-        ${formatDateOnly(b.date)}
-      </td>
+      <td class="view-${b.id}">${formatDateOnly(b.date)}</td>
       <td class="edit-${b.id}" style="display:none">
         <input type="date" value="${formatDateOnly(b.date)}" data-field="date">
       </td>
@@ -311,24 +344,17 @@ async function updateBooking(id, btn) {
 
   btn.textContent = "更新中…";
 
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
+  const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
   const json = await res.json();
 
   if (json.success) {
     btn.textContent = "完成";
-
-    // 更新本地資料
     const updated = allBookings.find(b => b.id == id);
-    if (updated) {
-      Object.assign(updated, payload);
-    }
+    if (updated) Object.assign(updated, payload);
 
     setTimeout(() => {
       renderTable(document.getElementById("keyword").value);
-    }, 500);
+    }, 400);
 
   } else {
     btn.textContent = "修改";
@@ -336,7 +362,7 @@ async function updateBooking(id, btn) {
   }
 }
 
-/* 其他按鈕 */
+/* 其他功能 */
 document.getElementById("btnSearch").addEventListener("click", ()=>{
   renderTable(document.getElementById("keyword").value);
 });
