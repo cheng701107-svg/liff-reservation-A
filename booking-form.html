@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>靖寬靖廣 — 線上預訂</title>
+<title>線上預訂</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -36,7 +36,7 @@
 
 <body>
 
-<header>靖寬靖廣 — 線上預訂</header>
+<header>線上預訂</header>
 
 <div class="container">
   <div class="card">
@@ -240,7 +240,7 @@ async function checkRoom() {
     }
 
     if (conflict) {
-      availabilityHint.textContent = "⚠ 有滿房日期";
+      availabilityHint.textContent = "⚠ 已客滿";
       availabilityHint.className = "availability full";
       submitBtn.disabled = true;
     } else {
@@ -315,6 +315,7 @@ async function onSubmit(e) {
 
 </body>
 </html>
+
 
 
 
