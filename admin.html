@@ -627,49 +627,36 @@ document.getElementById("btnExport").addEventListener("click",()=>{
 /* ============================
     🧱 一鍵標滿房（新增假訂單）
    ============================ */
-async function blockDateFull(){
+async function blockDateFull() {
   const house = document.getElementById("blockHouse").value;
   const date = document.getElementById("blockDate").value;
 
-  if(!date){
+  if (!date) {
     alert("請選擇要標示滿房的日期");
     return;
   }
 
-  const payload = {
-    action: "createBooking",
-    uid: "SYSTEM",
-    name: "外部訂房",
-    phone: "0000000000",
-    email: "",
-    house,
-    date,
-    nights: 1,
-    adult: 0,
-    child: 0,
-    pet: "",
-    note: "系統：標示滿房",
-    status: "保留中",
-    payment: "未收款"
-  };
+  document.getElementById("blockStatus").textContent = "檢查中…";
 
-  document.getElementById("blockStatus").textContent = "新增中…";
-
-  const res = await fetch(API_URL,{
-    method:"POST",
-    body:JSON.stringify(payload)
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "blockDateFull",
+      admin_key: ADMIN_KEY,
+      house,
+      date
+    })
   });
+
   const json = await res.json();
 
-  if(json.success){
-    document.getElementById("blockStatus").textContent =
-      `已標示滿房（${date}）`;
-    loadBookings();
-  } else {
-    document.getElementById("blockStatus").textContent =
-      "標示失敗：" + json.error;
-  }
+  document.getElementById("blockStatus").textContent = json.message || "完成";
+
+  // 重新載入列表與月曆
+  loadBookings();
+  loadCalendar();
 }
+
 
   /* ============================
    📅 滿房月曆功能
