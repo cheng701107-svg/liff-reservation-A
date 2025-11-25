@@ -274,6 +274,11 @@ body.modal-open {
 
   <!-- 表格 -->
   <section class="section">
+    <!-- ➕ 新增訂單 -->
+<section class="section">
+  <button class="btn btn-primary" onclick="openCreateModal()">➕ 新增訂單</button>
+</section>
+
     <h2>📋 訂房清單</h2>
 
    <div class="table-wrapper">
@@ -813,12 +818,73 @@ function closeDayModal() {
     document.body.classList.remove("modal-open");
 }
 
+function openCreateModal(){
+  document.getElementById("createModal").style.display = "block";
+  document.body.classList.add("modal-open");
+}
+
+function closeCreateModal(){
+  document.getElementById("createModal").style.display = "none";
+  document.body.classList.remove("modal-open");
+}
 
  
 /* ============================
     初始化
    ============================ */
 loadBookings();
+
+async function createBooking() {
+
+  const payload = {
+    action: "createBooking",
+    admin_key: ADMIN_KEY,
+    uid: "ADMIN",
+    name: newName.value.trim(),
+    phone: newPhone.value.trim(),
+    email: "",
+    house: newHouse.value,
+    date: newDate.value,
+    nights: Number(newNights.value),
+    adult: Number(newAdult.value),
+    child: Number(newChild.value),
+    pet: newPet.value.trim(),
+    note: newNote.value.trim(),
+    status: newStatus.value,
+    payment: newPayment.value
+  };
+
+  // 手機格式簡易驗證
+  if (!/^09\d{8}$/.test(payload.phone)) {
+    alert("手機格式錯誤，需為 09 開頭 10 碼");
+    return;
+  }
+
+  if (!payload.date) {
+    alert("請選擇入住日期");
+    return;
+  }
+
+  // 呼叫後端
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  const json = await res.json();
+
+  if (!json.success) {
+    alert("新增失敗：" + json.error);
+    return;
+  }
+
+  alert("新增成功！");
+
+  // 關閉視窗 + 重新載入訂單列表
+  closeCreateModal();
+  loadBookings();
+}
+  
 </script>
 
 <!-- ============================
@@ -840,6 +906,95 @@ loadBookings();
 
   </div>
 </div>
+
+<!-- ============================
+     ➕ 新增訂單 Modal
+     ============================ -->
+<div id="createModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+
+    <h3>➕ 新增訂單</h3>
+
+    <div class="field">
+      <label>姓名</label>
+      <input id="newName" type="text">
+    </div>
+
+    <div class="field">
+      <label>手機</label>
+      <input id="newPhone" type="text" placeholder="09xxxxxxxx">
+    </div>
+
+    <div class="field">
+      <label>館別</label>
+      <select id="newHouse">
+        <option>A館</option>
+        <option>B館</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>入住日期</label>
+      <input id="newDate" type="date">
+    </div>
+
+    <div class="field">
+      <label>住宿天數</label>
+      <input id="newNights" type="number" min="1" value="1">
+    </div>
+
+    <div class="field">
+      <label>大人數量</label>
+      <input id="newAdult" type="number" min="1" value="2">
+    </div>
+
+    <div class="field">
+      <label>小孩數量</label>
+      <input id="newChild" type="number" min="0" value="0">
+    </div>
+
+    <div class="field">
+      <label>寵物</label>
+      <input id="newPet" type="text">
+    </div>
+
+    <div class="field">
+      <label>備註</label>
+      <textarea id="newNote"></textarea>
+    </div>
+
+    <div class="field">
+      <label>狀態</label>
+      <select id="newStatus">
+        <option>待確認</option>
+        <option>已確認</option>
+        <option>保留中</option>
+        <option>已入住</option>
+        <option>已取消</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>收款狀態</label>
+      <select id="newPayment">
+        <option>未收款</option>
+        <option>已收訂金</option>
+        <option>已收尾款</option>
+        <option>已收全額</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" onclick="createBooking()" style="width:100%; margin-top:10px;">
+      ➕ 新增
+    </button>
+
+    <button class="btn" onclick="closeCreateModal()" style="width:100%; margin-top:10px;">
+      關閉
+    </button>
+
+  </div>
+</div>
+
   
 </body>
 </html>
