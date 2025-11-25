@@ -616,7 +616,6 @@ function drawCalendar(fullDates) {
 
   calTitle.textContent = `${calYear} 年 ${calMonth} 月`;
 
-  // 建立日期資訊
   const firstDay = new Date(calYear, calMonth - 1, 1);
   const daysInMonth = new Date(calYear, calMonth, 0).getDate();
   const startWeekDay = firstDay.getDay();
@@ -631,24 +630,28 @@ function drawCalendar(fullDates) {
 
   let dayCount = 0;
 
-  // 前面空格
+  // 前空格
   for (let i = 0; i < startWeekDay; i++) {
     html += "<td></td>";
     dayCount++;
   }
 
-  // 日期
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  for (let day = 1; day <= daysInMonth; day++) {
 
+    const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const isFull = fullDates.includes(dateStr);
 
-    html += `<td style="padding:8px; ${isFull ? "background:#f44336;color:#fff;font-weight:700;" : ""}">
-      ${d}${isFull ? "<br><small>滿</small>" : ""}
-    </td>`;
+    html += `
+      <td onclick="clickCalendarDay('${dateStr}')"
+          style="padding:8px; cursor:pointer;
+                 ${isFull ? "background:#f44336;color:#fff;font-weight:700;" : ""}
+          ">
+        ${day}
+        ${isFull ? "<br><small>滿</small>" : ""}
+      </td>
+    `;
 
     dayCount++;
-
     if (dayCount % 7 === 0) html += "</tr><tr>";
   }
 
@@ -657,11 +660,66 @@ function drawCalendar(fullDates) {
   table.innerHTML = html;
 }
 
+/* 點擊月曆日期 → 取得該日訂單 */
+function clickCalendarDay(dateStr) {
+  const list = allBookings.filter(b => b.date === dateStr);
+  openDayModal(dateStr, list);
+}
+
+
+ function openDayModal(dateStr, list) {
+  const modal = document.getElementById("dayModal");
+  const title = document.getElementById("modalTitle");
+  const content = document.getElementById("modalContent");
+
+  title.textContent = `📅 ${dateStr} — 訂單列表`;
+
+  if (list.length === 0) {
+    content.innerHTML = `<p>當天沒有訂單。</p>`;
+  } else {
+    content.innerHTML = list.map(b => `
+      <div style="border-bottom:1px solid #ccc; padding:8px 0;">
+        <div><strong>${b.name}</strong>（${b.phone}）</div>
+        <div>館別：${b.house}</div>
+        <div>狀態：${b.status}</div>
+        <div>收款：${b.payment}</div>
+        <div style="font-size:12px; color:#666;"># ${b.id}</div>
+      </div>
+    `).join("");
+  }
+
+  modal.style.display = "flex";
+}
+
+function closeDayModal() {
+  document.getElementById("dayModal").style.display = "none";
+}
+ 
 /* ============================
     初始化
    ============================ */
 loadBookings();
 </script>
 
+<!-- ============================
+     📌 日訂單列表 Modal
+     ============================ -->
+<div id="dayModal" 
+     style="display:none; position:fixed; left:0; top:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+  <div style="background:#fff; padding:20px; border-radius:12px; width:90%; max-width:500px;">
+    
+    <h3 id="modalTitle">訂單列表</h3>
+    <div id="modalContent" style="max-height:300px; overflow-y:auto; margin-top:10px;"></div>
+
+    <button onclick="closeDayModal()" 
+            style="margin-top:15px; width:100%; padding:10px; border:none;
+                   background:#06c755; color:#fff; border-radius:8px; font-size:16px;">
+      關閉
+    </button>
+
+  </div>
+</div>
+  
 </body>
 </html>
