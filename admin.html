@@ -103,6 +103,37 @@
   .pay-final { color:#007bff; font-weight:700; }
   .pay-full { color:#2e7d32; font-weight:700; }
 
+  /* ================================
+   📱 手機版：姓名固定 + 可左右滑動
+   ================================ */
+@media (max-width: 768px) {
+
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 1200px; /* 避免壓扁 */
+  }
+
+  /* 固定 ID 欄（可選） */
+  td:nth-child(1), th:nth-child(1) {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 3;
+  }
+
+  /* 固定 姓名欄 */
+  td:nth-child(3), th:nth-child(3) {
+    position: sticky;
+    left: 60px;      /* ID 欄位寬度 */
+    background: #fff;
+    z-index: 3;
+  }
+}
+
 </style>
 </head>
 
@@ -169,11 +200,12 @@
 </section>
 
   <!-- 表格 -->
-  <section class="section">
-    <h2>📋 訂房清單</h2>
+ <section class="section">
+  <h2>📋 訂房清單</h2>
 
-    <div>
-      <table>
+  <div class="table-wrapper">
+    <table>
+
         <thead>
           <tr>
             <th class="sortable" data-field="id">ID</th>
