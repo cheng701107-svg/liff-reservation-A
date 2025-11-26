@@ -1,96 +1,91 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<title>訂房紀錄查詢 - 靖寬民宿</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<title>訂房紀錄查詢</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
   body {
-    font-family: "Noto Sans TC","Microsoft JhengHei", sans-serif;
     margin: 0;
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     background: #f5f5f5;
   }
 
   header {
     background: #06c755;
     color: #fff;
-    padding: 16px;
-    text-align: center;
-    font-size: 22px;
+    padding: 20px;
+    font-size: 24px;
     font-weight: 900;
+    text-align: center;
   }
 
   .container {
-    max-width: 560px;
+    max-width: 600px;
     margin: 0 auto;
-    padding: 16px;
+    padding: 20px;
   }
 
-  .card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 14px 16px;
-    margin-top: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  }
-
-  .title {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: #333;
-  }
-
-  .row {
-    font-size: 14px;
-    margin-bottom: 4px;
-    color: #444;
-  }
-
-  .status {
-    margin-top: 6px;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  .status-ok { color: #06c755; }
-  .status-wait { color: #f57c00; }
-  .status-cancel { color: #d32f2f; }
-
-  .input-area {
-    margin: 18px 0;
-  }
-
-  input {
+  .input-box {
     width: 100%;
-    padding: 12px;
-    font-size: 16px;
+    padding: 14px;
+    border: 2px solid #06c755;
     border-radius: 10px;
-    border: 1px solid #ccc;
+    font-size: 18px;
+    outline: none;
     box-sizing: border-box;
+    background: #eef9ff;
   }
 
   .btn {
     width: 100%;
-    padding: 14px;
     background: #06c755;
     color: #fff;
+    padding: 16px;
     border: none;
-    border-radius: 999px;
-    font-size: 16px;
+    border-radius: 50px;
+    font-size: 20px;
     font-weight: 700;
-    margin-top: 12px;
+    margin-top: 20px;
     cursor: pointer;
   }
 
-  .btn:disabled {
-    background: #9e9e9e;
+  .error {
+    margin-top: 15px;
+    font-size: 18px;
+    color: #d32f2f;
   }
 
-  #result {
-    margin-top: 16px;
+  .card {
+    background: #fff;
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    margin-top: 20px;
   }
+
+  .row {
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+
+  .title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .status {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+
+  .ok { color: #06c755; }
+  .wait { color: #f9a825; }
+  .cancel { color: #d32f2f; }
+
 </style>
 </head>
 
@@ -100,78 +95,78 @@
 
 <div class="container">
 
-  <div class="input-area">
-    <label style="font-weight:700;">請輸入您的手機號碼：</label>
-    <input id="phone" type="tel" placeholder="0912345678" maxlength="10" />
-    <button class="btn" id="btnSearch">查詢</button>
-  </div>
+  <p style="font-size:18px; font-weight:700;">請輸入您的手機號碼：</p>
 
-  <div id="result">請先輸入手機號碼進行查詢。</div>
+  <input id="phoneInput" class="input-box" placeholder="例如：0987123456" maxlength="10">
 
+  <button class="btn" onclick="search()">查詢</button>
+
+  <div id="result"></div>
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxAhWFD3rLv2O1RSnmEA3EJjXIK5vFKja4IHGtL8EW3q-6ZD77K1Emc_ryFAK1fOZKA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxVKfLN8hXeY-xnj_b0FVGxMot6gRG9QB_5Zr8bCQof8gpMSouyofS-JibCF27Z_zJR/exec";
 
-/* 狀態顏色 */
-function statusClass(s) {
-  if (!s) return "status-wait";
-  s = s.trim();
-  if (["已訂房", "已確認", "已入住", "完成"].includes(s)) return "status-ok";
-  if (["待確認", "處理中"].includes(s)) return "status-wait";
-  if (["已取消", "取消"].includes(s)) return "status-cancel";
-  return "status-wait";
+function statusColor(s){
+  s = (s || "").trim();
+  if (["已訂房","已入住","完成","已確認"].includes(s)) return "ok";
+  if (["待確認","處理中"].includes(s)) return "wait";
+  return "cancel";
 }
 
-/* 搜尋事件 */
-document.getElementById("btnSearch").addEventListener("click", loadBookings);
-
-async function loadBookings() {
-  const phone = document.getElementById("phone").value.trim();
+async function search(){
+  const phone = document.getElementById("phoneInput").value.trim();
   const result = document.getElementById("result");
 
-  if (!/^09\d{8}$/.test(phone)) {
-    result.innerHTML = "<p style='color:#d32f2f;'>手機格式必須為 09xxxxxxxx</p>";
+  result.innerHTML = "";
+
+  if (!/^09\d{8}$/.test(phone)){
+    result.innerHTML = `<div class="error">請輸入正確的手機號碼（09xxxxxxxx）</div>`;
     return;
   }
 
-  result.innerHTML = "查詢中…";
-
-  try {
-    const res = await fetch(`${API_URL}?action=getWebBookings&phone=${phone}&ts=${Date.now()}`);
+  try{
+    const url = `${API_URL}?action=getWebBookings&phone=${phone}&t=${Date.now()}`;
+    const res = await fetch(url);
     const json = await res.json();
 
-    if (!json.success) {
-      result.innerHTML = `<p style='color:#d32f2f;'>查詢失敗：${json.error}</p>`;
+    if (!json.success){
+      result.innerHTML = `<div class="error">查詢失敗：${json.error}</div>`;
       return;
     }
 
-    let items = json.bookings || [];
+    const list = json.bookings;
 
-    /* 🔥 自動排除取消訂單（你指定的 B 模式） */
-    items = items.filter(b => !["取消","已取消"].includes(b.status));
-
-    if (items.length === 0) {
-      result.innerHTML = "<p>找不到此手機的訂房紀錄。</p>";
+    if (!list || list.length === 0){
+      result.innerHTML = `<div class="error">查無訂房紀錄</div>`;
       return;
     }
 
-    result.innerHTML = items.map(b => `
+    // 渲染結果
+    result.innerHTML = list.map(b => `
       <div class="card">
         <div class="title">訂單編號：${b.id}</div>
-        <div class="row">入住日期：${b.date}</div>
+
+        <div class="row">建立時間：${b.createdAt}</div>
+        <div class="row">姓名：${b.name}</div>
+        <div class="row">手機：${b.phone}</div>
+        <div class="row">Email：${b.email || "—"}</div>
+
         <div class="row">館別：${b.house}</div>
+        <div class="row">入住日：${b.date}</div>
         <div class="row">住宿天數：${b.nights} 晚</div>
-        <div class="row">大人：${b.adult} 位</div>
-        <div class="row">小孩：${b.child} 位</div>
+        <div class="row">大人：${b.adult}　小孩：${b.child}</div>
         <div class="row">寵物：${b.pet || "無"}</div>
         <div class="row">備註：${b.note || "無"}</div>
-        <div class="status ${statusClass(b.status)}">狀態：${b.status}</div>
+
+        <div class="status ${statusColor(b.status)}">
+          狀態：${b.status}
+        </div>
       </div>
     `).join("");
 
-  } catch (err) {
-    result.innerHTML = `<p style='color:#d32f2f;'>查詢錯誤：${err}</p>`;
+  } catch(err){
+    result.innerHTML = `<div class="error">發生錯誤：${err}</div>`;
   }
 }
 </script>
