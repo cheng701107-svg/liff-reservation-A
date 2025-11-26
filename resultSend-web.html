@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<title>預訂完成（Web 版）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+  body {
+    font-family: "Noto Sans TC","Microsoft JhengHei",sans-serif;
+    margin: 0;
+    background: #f5f5f5;
+  }
+  header {
+    background: #06c755;
+    color: white;
+    padding: 16px;
+    font-size: 22px;
+    text-align: center;
+    font-weight: 900;
+  }
+  .container {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  h2 {
+    margin: 0 0 12px;
+    font-size: 20px;
+    font-weight: 900;
+  }
+  .info {
+    background: #f0f0f0;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    white-space: pre-wrap;
+  }
+  .btn {
+    width: 100%;
+    padding: 12px;
+    background: #06c755;
+    color: white;
+    border-radius: 999px;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 16px;
+    border: none;
+    cursor: pointer;
+  }
+</style>
+</head>
+
+<body>
+
+<header>預訂完成</header>
+
+<div class="container">
+  <div class="card">
+    <h2>您的預訂已成功送出</h2>
+
+    <div id="summary" class="info"></div>
+
+    <button class="btn" onclick="goHome()">返回首頁</button>
+  </div>
+</div>
+
+<script>
+function getQuery() {
+  const p = new URLSearchParams(location.search);
+  return {
+    id: p.get("id") || "",
+    name: p.get("name") || "",
+    date: p.get("date") || ""
+  };
+}
+
+function renderSummary() {
+  const q = getQuery();
+
+  const text =
+`感謝您，${q.name}！
+
+您的訂單已成功送出 🎉
+
+📌 訂單編號：${q.id}
+📌 入住日期：${q.date}
+
+管家將盡快與您確認，請保持手機暢通。`;
+
+  document.getElementById("summary").textContent = text;
+}
+
+function goHome() {
+  location.href = "booking-web.html";  // 返回 Web 預訂頁
+}
+
+renderSummary();
+</script>
+
+</body>
+</html>
