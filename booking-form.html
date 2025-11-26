@@ -5,7 +5,6 @@
 <title>Line 預訂表單</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- LIFF -->
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
 <style>
@@ -73,27 +72,68 @@
       </div>
 
       <div class="field">
-        <label>住宿天數</label>
-        <select id="nights" name="nights">
-          <option value="1">1 晚</option>
-          <option value="2">2 晚</option>
-          <option value="3">3 晚</option>
-        </select>
-      </div>
+  <label>住宿天數</label>
+  <select id="nights" name="nights">
+    <option value="1">1 晚</option>
+    <option value="2">2 晚</option>
+    <option value="3">3 晚</option>
+  </select>
+</div>
 
-      <div class="field">
-        <label>大人數</label>
-        <select id="adult" name="adult">
-          ${Array.from({length: 30}, (_, i) => `<option value="${i+6}">${i+6} 位</option>`).join("")}
-        </select>
-      </div>
+     <div class="field">
+  <label>大人數</label>
+  <select id="adult" name="adult">
+    <option value="6">6 位</option>
+    <option value="7">7 位</option>
+    <option value="8">8 位</option>
+    <option value="9">9 位</option>
+    <option value="10">10 位</option>
+    <option value="11">11 位</option>
+    <option value="12">12 位</option>
+    <option value="13">13 位</option>
+    <option value="14">14 位</option>
+    <option value="15">15 位</option>
+    <option value="16">16 位</option>
+    <option value="17">17 位</option>
+    <option value="18">18 位</option>
+    <option value="19">19 位</option>
+    <option value="20">20 位</option>
+    <option value="21">21 位</option>
+    <option value="22">22 位</option>
+    <option value="23">23 位</option>
+    <option value="24">24 位</option>
+    <option value="25">25 位</option>
+    <option value="26">26 位</option>
+    <option value="27">27 位</option>
+    <option value="28">28 位</option>
+    <option value="29">29 位</option>
+    <option value="30">30 位</option>
+    <option value="31">31 位</option>
+    <option value="32">32 位</option>
+    <option value="33">33 位</option>
+    <option value="34">34 位</option>
+    <option value="35">35 位</option>
+  </select>
+</div>
 
-      <div class="field">
-        <label>小孩數</label>
-        <select id="child" name="child">
-          ${Array.from({length: 11}, (_, i) => `<option value="${i}">${i} 位</option>`).join("")}
-        </select>
-      </div>
+
+     <div class="field">
+  <label>小孩數</label>
+  <select id="child" name="child">
+    <option value="0">0 位</option>
+    <option value="1">1 位</option>
+    <option value="2">2 位</option>
+    <option value="3">3 位</option>
+    <option value="4">4 位</option>
+    <option value="5">5 位</option>
+    <option value="6">6 位</option>
+    <option value="7">7 位</option>
+    <option value="8">8 位</option>
+    <option value="9">9 位</option>
+    <option value="10">10 位</option>
+  </select>
+</div>
+
 
       <div class="field">
         <label>寵物</label>
@@ -105,56 +145,47 @@
         <textarea id="note" name="note"></textarea>
       </div>
 
-      <button id="submitBtn" class="btn-submit" disabled>送出預訂</button>
-
-      <p class="notice" style="font-size:10px;">
-        送出表單即表示您已閱讀並同意本服務的
-        <a href="terms.html" target="_blank">服務條款</a> 與
-        <a href="privacy.html" target="_blank">隱私權政策</a>。
-      </p>
-
+      <button id="submitBtn" class="btn-submit" disabled>
+        送出預訂
+      </button>
+      <p class="notice" style="font-size: 10px;">
+  送出表單即表示您已閱讀並同意本服務的
+  <a href="terms.html" target="_blank">服務條款</a> 與
+  <a href="privacy.html" target="_blank">隱私權政策</a>。
+</p>
     </form>
   </div>
 </div>
+
 <script>
-// =====================================
-//  你的 API 與 LIFF 設定
-// =====================================
 const API_URL = "https://script.google.com/macros/s/AKfycbxAhWFD3rLv2O1RSnmEA3EJjXIK5vFKja4IHGtL8EW3q-6ZD77K1Emc_ryFAK1fOZKA/exec";
 const LIFF_ID = "2008409020-k4Oy7Y0D";
 
-// =====================================
-//  SECRET_KEY（你提供的新版 Token）
-// =====================================
-const SECRET_KEY = "kT3yJ9pZxF8qR1sVb6NwM2hE0cX7uA4tL9gQ5dB2fS8kH3mP7rT6vW1yC4nE9";
-
-// DOM 快取
-const uidInput = document.getElementById("uid");
-const emailInput = document.getElementById("email");
-const nameInput = document.getElementById("name");
-const phoneInput = document.getElementById("phone");
-const houseInput = document.getElementById("house");
-const dateInput = document.getElementById("date");
-const nightsInput = document.getElementById("nights");
-const adultInput = document.getElementById("adult");
-const childInput = document.getElementById("child");
-const petInput = document.getElementById("pet");
-const noteInput = document.getElementById("note");
-const nameField = document.getElementById("nameField");
+/* DOM 快取 */
+const uidInput     = document.getElementById("uid");
+const emailInput   = document.getElementById("email");
+const nameInput    = document.getElementById("name");
+const phoneInput   = document.getElementById("phone");
+const houseInput   = document.getElementById("house");
+const dateInput    = document.getElementById("date");
+const nightsInput  = document.getElementById("nights");
+const adultInput   = document.getElementById("adult");
+const childInput   = document.getElementById("child");
+const petInput     = document.getElementById("pet");
+const noteInput    = document.getElementById("note");
+const nameField    = document.getElementById("nameField");
 const availabilityHint = document.getElementById("availabilityHint");
-const submitBtn = document.getElementById("submitBtn");
-const statusLine = document.getElementById("statusLine");
+const submitBtn        = document.getElementById("submitBtn");
+const statusLine       = document.getElementById("statusLine");
 
-// =====================================
-// 初始化
-// =====================================
+/* -------------------- 初始化 -------------------- */
 document.addEventListener("DOMContentLoaded", () => {
   setMinDate();
   initLiff();
   bindEvents();
 });
 
-// min date = 今天
+/* 最小入住日 = 今天 */
 function setMinDate() {
   const t = new Date();
   const y = t.getFullYear();
@@ -163,15 +194,14 @@ function setMinDate() {
   dateInput.min = `${y}-${m}-${d}`;
 }
 
-// =====================================
-// LIFF 初始化
-// =====================================
+/* -------------------- LIFF 初始化 -------------------- */
 async function initLiff() {
   try {
     await liff.init({ liffId: LIFF_ID });
 
     let profile = await liff.getProfile();
     uidInput.value = profile.userId;
+
     nameInput.value = profile.displayName;
     nameField.style.display = "none";
 
@@ -182,13 +212,10 @@ async function initLiff() {
   } catch (err) {
     statusLine.textContent = "⚠ 無法取得 LINE 帳號（仍可預訂）";
   }
-
   submitBtn.disabled = false;
 }
 
-// =====================================
-// 綁定事件
-// =====================================
+/* -------------------- 綁定事件 -------------------- */
 function bindEvents() {
   houseInput.addEventListener("change", checkRoom);
   dateInput.addEventListener("change", checkRoom);
@@ -196,9 +223,7 @@ function bindEvents() {
   document.getElementById("bookingForm").addEventListener("submit", onSubmit);
 }
 
-// =====================================
-// 房況查詢
-// =====================================
+/* -------------------- 查房況 -------------------- */
 async function checkRoom() {
   if (!dateInput.value) return;
 
@@ -234,29 +259,7 @@ async function checkRoom() {
   }
 }
 
-// =====================================
-// 產生 HMAC-SHA256（瀏覽器原生 API）
-// =====================================
-async function hmacSHA256(message, key) {
-  const enc = new TextEncoder();
-  const keyData = enc.encode(key);
-  const msgData = enc.encode(message);
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
-  return btoa(String.fromCharCode(...new Uint8Array(signature)));
-}
-
-// =====================================
-// 送出表單
-// =====================================
+/* -------------------- 提交（模式 B → 跳轉 resultSend.html） -------------------- */
 async function onSubmit(e) {
   e.preventDefault();
 
@@ -271,15 +274,10 @@ async function onSubmit(e) {
   submitBtn.disabled = true;
   submitBtn.textContent = "送出中…";
 
-  // 🔰 安全欄位
-  const timestamp = Date.now();
-  const nonce = Math.random().toString(36).substring(2, 10);
-
   const payload = {
     action: "createBooking",
     uid: uidInput.value,
-    name,
-    phone,
+    name, phone,
     email: emailInput.value,
     house: houseInput.value,
     date: dateInput.value,
@@ -287,14 +285,8 @@ async function onSubmit(e) {
     adult: adultInput.value,
     child: childInput.value,
     pet: petInput.value,
-    note: noteInput.value,
-    timestamp,
-    nonce
+    note: noteInput.value
   };
-
-  // 📌 簽名內容（依照 GAS 後端規範）
-  const msg = `${payload.action}|${payload.uid}|${payload.name}|${payload.phone}|${payload.date}|${timestamp}|${nonce}`;
-  payload.signature = await hmacSHA256(msg, SECRET_KEY);
 
   try {
     const res = await fetch(API_URL, {
@@ -305,21 +297,20 @@ async function onSubmit(e) {
     const json = await res.json();
     if (!json.success) throw new Error(json.error);
 
-    // 跳轉至 resultSend.html
-    location.href =
-      `resultSend.html?id=${json.id}`
-      + `&name=${encodeURIComponent(name)}`
-      + `&phone=${encodeURIComponent(phone)}`
-      + `&house=${encodeURIComponent(houseInput.value)}`
-      + `&date=${encodeURIComponent(dateInput.value)}`
-      + `&nights=${encodeURIComponent(nightsInput.value)}`
-      + `&adult=${encodeURIComponent(adultInput.value)}`
-      + `&child=${encodeURIComponent(childInput.value)}`
-      + `&pet=${encodeURIComponent(petInput.value)}`
-      + `&note=${encodeURIComponent(noteInput.value)}`;
+    /* 跳轉至 resultSend.html */
+    location.href = `resultSend.html?id=${json.id}`
+                  + `&name=${encodeURIComponent(name)}`
+                  + `&phone=${encodeURIComponent(phone)}`
+                  + `&house=${encodeURIComponent(houseInput.value)}`
+                  + `&date=${encodeURIComponent(dateInput.value)}`
+                  + `&nights=${encodeURIComponent(nightsInput.value)}`
+                  + `&adult=${encodeURIComponent(adultInput.value)}`
+                  + `&child=${encodeURIComponent(childInput.value)}`
+                  + `&pet=${encodeURIComponent(petInput.value)}`
+                  + `&note=${encodeURIComponent(noteInput.value)}`;
 
   } catch (err) {
-    alert("預訂失敗：" + err.message);
+    alert("預訂成功，但傳送摘要失敗：" + err.message);
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "送出預訂";
@@ -329,3 +320,13 @@ async function onSubmit(e) {
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
