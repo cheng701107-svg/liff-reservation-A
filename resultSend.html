@@ -9,7 +9,7 @@
 
 <style>
   body {
-    font-family: "Noto Sans TC","Microsoft JhengHei",sans-serif;
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     margin: 0;
     background: #f5f5f5;
   }
@@ -77,39 +77,29 @@
 </div>
 
 <script>
-const LIFF_ID = "2008409020-k4Oy7Y0D";
+const LIFF_ID = "2008409020-k4Oy7Y0D";  // 你的 LIFF ID
 
 /* ---------------------------------------------------
-    安全轉義（避免 XSS）
---------------------------------------------------- */
-function esc(s) {
-  return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-/* ---------------------------------------------------
-    取得 booking-form.html 傳過來的 URL 參數
+   取得 URL 參數（booking-form 跳轉帶過來的資料）
 --------------------------------------------------- */
 function getQuery() {
   const p = new URLSearchParams(location.search);
   return {
-    id:     esc(p.get("id")),
-    name:   esc(p.get("name")),
-    phone:  esc(p.get("phone")),
-    house:  esc(p.get("house")),
-    date:   esc(p.get("date")),
-    nights: esc(p.get("nights")),
-    adult:  esc(p.get("adult")),
-    child:  esc(p.get("child")),
-    pet:    esc(p.get("pet") || "無"),
-    note:   esc(p.get("note") || "無")
+    id:     p.get("id"),
+    name:   p.get("name")   || "",
+    phone:  p.get("phone")  || "",
+    house:  p.get("house")  || "",
+    date:   p.get("date")   || "",
+    nights: p.get("nights") || "",
+    adult:  p.get("adult")  || "",
+    child:  p.get("child")  || "",
+    pet:    p.get("pet")    || "",
+    note:   p.get("note")   || ""
   };
 }
 
 /* ---------------------------------------------------
-    建立 FLEX row
+   Flex row function
 --------------------------------------------------- */
 function row(label, value) {
   return {
@@ -123,20 +113,18 @@ function row(label, value) {
   };
 }
 
+document.getElementById("closeBtn").addEventListener("click", () => {
+  if (liff.isInClient()) liff.closeWindow();
+  else window.close();
+});
+
 /* ---------------------------------------------------
-    主流程
+   主流程：初始化 LIFF → 傳送 Flex → 顯示摘要
 --------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", async () => {
   const q = getQuery();
 
-  // 若沒有 id → 直接顯示錯誤（避免被亂開）
-  if (!q.id) {
-    document.getElementById("status").textContent =
-      "⚠ 無效的連結（缺少訂單資訊）。";
-    return;
-  }
-
-  // 顯示摘要（供用戶截圖）
+  // 顯示文字摘要
   const summaryText =
 `預訂摘要
 訂單編號：${q.id}
@@ -146,25 +134,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 入住日：${q.date}
 住宿：${q.nights} 晚
 人數：大人 ${q.adult} 位 / 小孩 ${q.child} 位
-寵物：${q.pet}
-備註：${q.note}
+寵物：${q.pet || "無"}
+備註：${q.note || "無"}
 
-管家確認後，狀態會更新為「已訂房」，代表完成預訂。`;
+管家確認後，狀態會更新為「已訂房」，即完成預訂。`;
 
   document.getElementById("summaryBox").textContent = summaryText;
 
-  // LIFF 初始化
   try {
     await liff.init({ liffId: LIFF_ID });
 
-    // 如果不是在 LINE 裡，不能 sendMessages
     if (!liff.isInClient()) {
       document.getElementById("status").textContent =
         "⚠ 您不是在 LINE App 中開啟，因此無法自動傳送圖卡。請自行截圖保存。";
       return;
     }
 
-    // 建立 Flex 圖卡
+    /* ---------------------------------------------------
+       Flex 圖卡內容
+    --------------------------------------------------- */
     const flex = {
       type: "bubble",
       size: "mega",
@@ -188,13 +176,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           row("入住日", q.date),
           row("住宿", q.nights + " 晚"),
           row("人數", `大人 ${q.adult} / 小孩 ${q.child}`),
-          row("寵物", q.pet),
-          row("備註", q.note)
+          row("寵物", q.pet || "無"),
+          row("備註", q.note || "無")
         ]
       }
     };
 
-    // 傳送訊息
+    /* ---------------------------------------------------
+       送出 Flex → 使用 sendMessages（完全不扣額度）
+    --------------------------------------------------- */
     await liff.sendMessages([
       {
         type: "flex",
@@ -211,14 +201,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("status").textContent =
       "預訂已送出，但傳送 LINE 圖卡失敗，請自行截圖保存摘要。";
   }
-});
-
-/* ---------------------------------------------------
-    關閉視窗
---------------------------------------------------- */
-document.getElementById("closeBtn").addEventListener("click", () => {
-  if (liff.isInClient()) liff.closeWindow();
-  else window.close();
 });
 </script>
 
