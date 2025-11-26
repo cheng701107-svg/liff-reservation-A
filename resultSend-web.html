@@ -67,7 +67,7 @@
 
     <div id="summary" class="info"></div>
 
-    <button class="btn" onclick="goHome()">返回首頁</button>
+    <button class="btn" onclick="goHome()">返回預訂頁</button>
   </div>
 </div>
 
@@ -75,9 +75,16 @@
 function getQuery() {
   const p = new URLSearchParams(location.search);
   return {
-    id: p.get("id") || "",
-    name: p.get("name") || "",
-    date: p.get("date") || ""
+    id:     p.get("id")    || "",
+    name:   p.get("name")  || "",
+    phone:  p.get("phone") || "",
+    house:  p.get("house") || "",
+    date:   p.get("date")  || "",
+    nights: p.get("nights")|| "",
+    adult:  p.get("adult") || "",
+    child:  p.get("child") || "",
+    pet:    p.get("pet")   || "無",
+    note:   p.get("note")  || "無"
   };
 }
 
@@ -85,20 +92,24 @@ function renderSummary() {
   const q = getQuery();
 
   const text =
-`感謝您，${q.name}！
+`預訂摘要
+訂單編號：${q.id}
+姓名：${q.name}
+手機：${q.phone}
+館別：${q.house}
+入住日：${q.date}
+住宿：${q.nights} 晚
+人數：大人 ${q.adult} 位 / 小孩 ${q.child} 位
+寵物：${q.pet}
+備註：${q.note}
 
-您的訂單已成功送出 🎉
-
-📌 訂單編號：${q.id}
-📌 入住日期：${q.date}
-
-管家將盡快與您確認，請保持手機暢通。`;
+管家確認後，狀態會更新為「已訂房」，即完成預訂。`;
 
   document.getElementById("summary").textContent = text;
 }
 
 function goHome() {
-  location.href = "booking-web.html";  // 返回 Web 預訂頁
+  location.href = "google-booking.html"; 
 }
 
 renderSummary();
